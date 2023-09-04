@@ -1,24 +1,19 @@
-import toast, { Toaster } from 'react-hot-toast';
-import { useMediaQuery } from 'react-responsive';
-import CardGame from './CardGame';
+//import toast, { Toaster } from 'react-hot-toast';
+//import { useMediaQuery } from 'react-responsive';
 import { useSocketContext } from '../utils/socketUtils';
 import { useGameContext } from '../utils/gameUtils';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Player } from '../backend/gameInterface';
+import BoardHeader from './BoardHeader';
+import PlayedCards from './PlayedCards';
+import ReussiteArea from './ReussiteArea';
+import Hand from './Hand';
+import ContractList from './ContractList';
+//import { useCallback } from 'react';
+import { Contract, Player, Room } from '../backend/gameInterface';
+import { useState } from 'react';
 import { Card } from '../backend/Card';
-import ContractButton from './ContractButton';
+//import { Card } from '../backend/Card';
 
-const Board = () => {
-    const { SocketState } = useSocketContext();
-    const { GameState } = useGameContext();
-
-    //console.log("SocketState", SocketState.socket);
-    //console.log("GameState state", GameState.gameState);
-
-    const [clickedCard, setClickedCard] = useState<string[]>([]);
-
-    const isMobile = useMediaQuery({ maxWidth: 480 });
-
+/* const useCheckOrientation = () => {
     useEffect(() => {
         const checkOrientation = () => {
             const isPortraitOrientation = window.innerHeight > window.innerWidth;
@@ -44,139 +39,93 @@ const Board = () => {
             window.removeEventListener('resize', checkOrientation);
         };
     }, []);
+}; */
 
-    const handleContractChoice = useCallback((player: Player, index: number) => {
-        // Ajoutez une condition pour vérifier si l'appel est autorisé
-        if (!player || !SocketState.socket) {
-            // Si la condition n'est pas remplie, ne faites rien
-            return;
+const Board = () => {
+
+    //useCheckOrientation();
+
+    const { SocketState } = useSocketContext();
+    const { GameState } = useGameContext();
+
+    //console.log("SocketState", SocketState.socket);
+    //console.log("GameState state", GameState.gameState);
+
+    const [cardClickCount, setCardClickCount] = useState(0);
+    const [highLightedCard, setHighLightedCard] = useState<number | undefined>(undefined)
+
+    /* const isMobile = useMediaQuery({ maxWidth: 480 });*/
+
+    const isTheGoodPlayer: Player | undefined = GameState.gameState.players.find((player) => player.socketId === SocketState.socket?.id);
+    const isTheCurrentPlayer: Player | undefined = GameState.gameState.currentPlayer.socketId === SocketState.socket?.id ? GameState.gameState.currentPlayer : undefined;
+
+    const roomId: string | undefined = GameState.roomsState.rooms.find((room: Room) => room.players.find((player: Player) => player.socketId === SocketState.socket?.id)?.socketId === SocketState.socket?.id)?.roomId
+
+    const handleCardClick = (cardIndex: number) => {
+        // TODO: handle card click and update game state
+        console.log(`Card clicked => card: ${cardIndex}`);
+
+        const cardClicked: Card | undefined = isTheCurrentPlayer?.startedHand[cardIndex];
+
+        setCardClickCount(cardClickCount + 1);
+
+        if (cardClickCount === 1) {
+            // La carte est montée du paquet
+            setHighLightedCard(cardIndex)
+        } else if (cardClickCount === 2) {
+            // La carte est jouée
+            setHighLightedCard(undefined)
+            setCardClickCount(0);
+            SocketState.socket?.emit("card_played", { cardClicked: cardClicked, playerCardClicked: isTheCurrentPlayer })
         }
-        SocketState.socket?.emit('choose_contract', { player, contractIndex: index });
-    }, [SocketState.socket]);
+    };
 
-    const handleCardClicked = useCallback((card: Card | string, player: Player) => {
-        console.log("clickedCards", clickedCard)
-        console.log("handleCardClicked", card)
-        console.log("handleCardClicked player", player)
-
-        const cardIdentifier = typeof card === 'string' ? card : card.suit + card.value;
-
-        if (clickedCard.includes(cardIdentifier)) {
-            // La carte a déjà été cliquée, retirez-la de la div "boards-cards"
-            console.log("1");
-            setClickedCard((prevClickedCard) => prevClickedCard.filter((c) => c !== cardIdentifier));
-        } else {
-            console.log("2");
-            // La carte n'a pas encore été cliquée, ajoutez-la à celles qui ont été cliquées
-            setClickedCard((prevClickedCard) => [...prevClickedCard, cardIdentifier]);
+    const handleContractClick = (contract: Contract) => {
+        if (isTheCurrentPlayer) {
+            const contractIndex = GameState.gameState.contracts.indexOf(contract);
+            SocketState.socket?.emit("choose_contract", { playerContract: isTheCurrentPlayer, contractIndex, roomId });
         }
-
-        SocketState.socket?.emit('card_played', { cardClicked: card, playerClickedCards: player });
-    }, [SocketState.socket, clickedCard]);
+    };
 
 
-    const memoizedComponent = useMemo(() => (
-        <div className={`board-container ${isMobile ? 'mobile' : 'desktop'}`} key={"board-container"}>
-            <Toaster />
-            {GameState.gameState.players.map((player, playerIndex) => {
-                if (player.socketId === SocketState.socket?.id) {
-                    return (
-                        <>
-                            <div className="board-area-play" key={`board-area-play-${player.name}`} >
 
-                                {
-                                    GameState.gameState.currentContract?.contract && (
-                                        <div className="board-chosen-contract" key={`board-chosen-contract-${player.name}`}>
-                                            {GameState.gameState.currentContract?.player.name} a choisi {GameState.gameState.currentContract?.contract.name}
-                                        </div>
-                                    )
-                                }
+    console.log("isTheGoodPlayer", isTheGoodPlayer)
+    console.log("istheCurrentPlayer", isTheCurrentPlayer)
 
-                                {
-                                    GameState.gameState.currentContract?.contract.name !== "Réussite" && (
-                                        <div className="board-cards" key={`board-cards-${player.name}`}>
-                                            {
-                                                player.myFoldsDuringTurn.map((cardsPlayed: Card, indexCardPlayed: number) => (
-                                                    <div key={indexCardPlayed} className="board-cards-played">
-                                                        <div className="card" key={cardsPlayed.suit + cardsPlayed.value} >
-                                                            <span className={cardsPlayed.suit === '♥' || cardsPlayed.suit === '♦' ? 'suit card-red' : 'suit card-black'}>
-                                                                {cardsPlayed.suit}
-                                                            </span>
-                                                            <span>{cardsPlayed.value}</span>
-                                                        </div>
 
-                                                    </div>
-                                                ))
-                                            }
-                                        </div>
-                                    )
-                                }
+    return (
+        <div className="board">
+            {
+                GameState.gameState.currentContract?.contract.name != undefined && <BoardHeader />
+            }
 
-                                {
-                                    GameState.gameState.currentContract?.contract.name === "Réussite" && (
-                                        <div className="reussite-game" key={`reussite-game-${player.name}`} >
-                                            {
-                                                GameState.gameState.players.map((player, reussiteIndex) => (
-                                                    <div key={reussiteIndex} className="reussite-player">
-                                                        {player.name}
-                                                        <div className="reussite-cards" key={`reussite-cards-${player.name}`}>
-                                                            {Array(13).fill(null).map((cardPlacement, cardIndex) => (
-                                                                <div key={cardIndex} className="reussite-card">
-                                                                    {cardPlacement}
-                                                                </div>))
-                                                            }
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            }
-                                        </div>
-                                    )
-                                }
+            {
+                GameState.gameState.currentPlayer.myFoldsDuringTurn.length > 0 &&
+                <PlayedCards cards={GameState.gameState.currentPlayer.myFoldsDuringTurn} />
+            }
 
-                            </div>
-                            <div className="player" key={playerIndex}>
+            {
+                GameState.gameState.currentContract?.contract.name === "Réussite" && <ReussiteArea />
+            }
+            <div className="player-info">
 
-                                <div className="player-cards" key={`player-cards-${player.name}`}>
-                                    {player.startedHand.map((cardStartedHand, cardStartedHandIndex) => (
-                                        <CardGame
-                                            card={cardStartedHand}
-                                            key={cardStartedHandIndex}
-                                            onClick={() => handleCardClicked(cardStartedHand, player)}
-                                            highlighted={clickedCard.includes(cardStartedHand.suit + cardStartedHand.value)} />
-                                    ))}
-                                </div>
-                                <div className="player-name" key={`player-name-${player.name}`}>{player.name}</div>
-                            </div>
-                            <div className="board-area-contracts" key={`board-area-contracts-${player.name}`}>
-                                {
-                                    GameState.gameState.currentPlayer.name === player.name && (
-                                        GameState.gameState.contracts.map((contract, contractIndex) => (
-                                            <ContractButton
-                                                key={contractIndex}
-                                                contract={contract}
-
-                                                // eslint-disable-next-line no-restricted-syntax
-                                                onClick={() => handleContractChoice(player, contractIndex)}
-                                                contractIndex={contractIndex}
-                                            />
-                                        ))
-                                    )
-                                }
-                            </div>
-                        </>
-                    );
-                } else {
-                    return (
-                        <>
-
-                        </>
-                    )
+                {
+                    isTheGoodPlayer && <Hand cards={isTheGoodPlayer.startedHand} highlighted={highLightedCard} onCardClick={handleCardClick} />
                 }
-            })}
-        </div>
-    ), [isMobile, GameState.gameState.players, GameState.gameState.currentContract, GameState.gameState.currentPlayer.name, GameState.gameState.contracts, SocketState.socket?.id, clickedCard, handleCardClicked, handleContractChoice]);
 
-    return memoizedComponent;
+                {
+                    isTheGoodPlayer &&
+                    <h2>{isTheGoodPlayer.name}</h2>
+                }
+                {
+                    isTheCurrentPlayer &&
+                    <ContractList contracts={GameState.gameState.contracts} onContractClick={handleContractClick} />
+                }
+
+            </div>
+        </div>
+    )
+
 }
 
 export default Board

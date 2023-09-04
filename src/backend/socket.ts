@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Game } from "./Game";
 import { Contracts } from "./Contracts";
 import { GameState, RoomsState } from "./gameInterface";
+//import parse from 'json-stringify-safe'
 
 export class ServerSocket {
     public static instance: ServerSocket;
@@ -29,11 +30,11 @@ export class ServerSocket {
         this.users = {};
         this.game = new Game(this, Contracts.CONTRACTS);
 
-        this.io.on("connection", this.StartListeners.bind(this));
+        this.io.on("connection", this.startListeners.bind(this));
         console.log("Socket IO started");
     }
 
-    StartListeners(socket: Socket) {
+    startListeners(socket: Socket) {
         console.info(`Message received from ${socket.id}`);
 
         socket.on("handshake", (callback: (uid: string, users: string[], gameState: GameState, roomsState: RoomsState) => void) => {
@@ -47,7 +48,7 @@ export class ServerSocket {
                 console.info("This user has reconnected");
                 console.info("-------------------------");
 
-                const uid = this.GetUidFromSocketID(socket.id);
+                const uid = this.getUidFromSocketID(socket.id);
                 const users = Object.values(this.users);
 
                 if (uid) {
@@ -65,7 +66,7 @@ export class ServerSocket {
 
             callback(uid, users, this.game.gameState, this.game.roomsState);
 
-            this.SendMessage(
+            this.sendMessage(
                 "user_connected",
                 users.filter((id) => id !== socket.id),
                 users
@@ -93,12 +94,20 @@ export class ServerSocket {
             this.updateGameStateAndRoomState();
         });
 
-        socket.on("choose_contract", ({ player, contractIndex }) => {
-            this.game.chooseContract(player, contractIndex);
-            //console.log("this.game.gameState choose_contract", this.game.gameState)
-            //console.log("this.game.roomsState choose_contract", this.game.roomsState)
+        socket.on("choose_contract", ({ playerContract, contractIndex, roomId }) => {
+            console.log("choose_contract", playerContract, contractIndex, roomId)
+            this.game.chooseContract(playerContract, contractIndex, roomId);
+            this.game.updateChosenContracts(playerContract, contractIndex);
+
+            this.game.turnRound();
+
             this.updateGameStateAndRoomState();
         });
+
+        socket.on("card_played", ({ cardClicked, playerCardClicked }) => {
+            this.game.cardPlayed(cardClicked, playerCardClicked)
+            this.updateGameStateAndRoomState();
+        })
 
         socket.on("gobackgame", ({ roomIdGoBackGame }) => {
             this.game.goBackGame(roomIdGoBackGame);
@@ -113,7 +122,7 @@ export class ServerSocket {
             console.info(`User disconnected: ${socket.id}`);
 
             /** Remove user from users */
-            const uid = this.GetUidFromSocketID(socket.id);
+            const uid = this.getUidFromSocketID(socket.id);
             if (uid) {
                 delete this.users[uid];
             }
@@ -132,17 +141,17 @@ export class ServerSocket {
 
     updateGameStateAndRoomState() {
         // Update gameState and emit changes to clients
-        console.log("this.game.gameState updateGameStateAndRoomState", this.game.gameState)
-        console.log("this.game.roomsState updateGameStateAndRoomState", this.game.roomsState)
+        //console.log("this.game.gameState updateGameStateAndRoomState", this.game.gameState)
+        //console.log("this.game.roomsState updateGameStateAndRoomState", this.game.roomsState)
         this.io.emit("gameState", this.game.gameState);
         this.io.emit("roomsState", this.game.roomsState);
     }
 
-    GetUidFromSocketID = (id: string) => {
+    getUidFromSocketID = (id: string) => {
         return Object.keys(this.users).find((uid) => this.users[uid] === id);
     };
 
-    SendMessage = (name: string, players: string[], payload?: object) => {
+    sendMessage = (name: string, players: string[], payload?: object) => {
         console.info(`Emitting event: ${name} to ${players} players`);
         players.forEach((id) =>
             payload ? this.io.to(id).emit(name, payload) : this.io.to(id).emit(name)

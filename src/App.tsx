@@ -14,9 +14,7 @@ const App = () => {
   const { SocketState, SocketDispatch } = useSocketContext();
   const { GameState, GameDispatch } = useGameContext();
 
-  console.log("SocketState", SocketState.socket);
-  console.log("SocketState", SocketState.uid);
-  console.log("SocketState", SocketState.players);
+  console.log("SocketState", SocketState);
   console.log("GameState state", GameState.gameState);
   console.log("GameState rooms state", GameState.roomsState);
   //console.log("GameDispatch", GameDispatch);

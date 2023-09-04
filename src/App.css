@@ -250,13 +250,107 @@ tr:nth-child(even) {
     background-color: #e0e0e0;
 }
 
-.board-container {
+
+
+.board {
     background-color: darkgreen;
-    width: 100%;
+    width: 90%;
     height: 100vh;
 }
 
-.board-area-play {
+.hand {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    width: 80%;
+    padding: 20px;
+}
+
+.hand-card {
+    width: 60px;
+    height: 60px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    font-weight: bold;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+    cursor: pointer;
+}
+
+.hand-card.highlighted {
+    transform: translateY(-5px);
+    transition: transform 0.2s ease-in-out;
+}
+
+.hand-card .suit {
+    position: absolute;
+    top: 5px;
+    /* Ajustez la position verticale selon vos besoins */
+    left: 5px;
+    /* Ajustez la position horizontale selon vos besoins */
+}
+
+.card-red {
+    color: red;
+}
+
+.card-black {
+    color: black;
+}
+
+.player-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    height: 50%;
+}
+
+.player-info h2 {
+    color: #fff;
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    text-transform: capitalize;
+}
+
+.contract-list {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    gap: 4px;
+}
+
+.contract {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    border: solid 1px #0056b3;
+    padding: 5px 10px;
+    width: auto;
+    height: 40px;
+}
+
+.contract:hover {
+    background-color: white;
+    color: #007bff;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.board-header{
+    text-align: center;
+    font-size: 1.5rem;
+    color: #fff;
+}
+
+/* .board-area-play {
     height: 55%;
 }
 
@@ -268,13 +362,13 @@ tr:nth-child(even) {
     margin: auto;
 }
 
-/* Styles pour mobile */
+//Styles pour mobile 
 .board-container.mobile {
     height: 200px;
     width: 100%;
 }
 
-/* Styles pour bureau (desktop) */
+// Styles pour bureau (desktop) 
 .board-container.desktop {
     width: 90%;
 }
@@ -312,7 +406,7 @@ tr:nth-child(even) {
     width: 20px;
     height: 30px;
     border: 1px solid #ccc;
-}
+} */
 
 .board-area-contracts {
     display: flex;
