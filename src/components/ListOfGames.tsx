@@ -149,7 +149,13 @@ const ListOfGames = () => {
                                             >
                                                 Rejoindre
                                             </button>
-                                        )}
+                                        )
+                                    }
+                                    {
+                                        joinedRoom.includes(room.roomId) && (
+                                            <p>en attente ...</p>
+                                        )
+                                    }
                                     {GameState.roomsState.rooms.length !== 0 &&
                                         room.players.length === 4 &&
                                         room.players[0].socketId === SocketState.socket?.id ? (
@@ -166,12 +172,11 @@ const ListOfGames = () => {
                                         >
                                             Revenir à la partie
                                         </button>
-                                    ) : (
-                                        <p>en attente ...</p>
-                                    )}
+                                    ) : null}
                                 </td>
                             </tr>
                         ))}
+
                     {!GameState.roomsState.rooms.length && (
                         <tr>
                             <td colSpan={2}>Aucune partie en cours</td>

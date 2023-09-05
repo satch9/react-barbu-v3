@@ -3,7 +3,8 @@ import { Socket, Server as ServerSocketIo, ServerOptions } from "socket.io";
 import { v4 as uuidv4 } from "uuid";
 import { Game } from "./Game";
 import { Contracts } from "./Contracts";
-import { GameState, RoomsState } from "./gameInterface";
+import { Contract, GameState, Player, RoomsState } from "./gameInterface";
+import { Card } from "./Card";
 //import parse from 'json-stringify-safe'
 
 export class ServerSocket {
@@ -26,10 +27,8 @@ export class ServerSocket {
         };
 
         this.io = new ServerSocketIo(httpServer, options);
-
         this.users = {};
         this.game = new Game(this, Contracts.CONTRACTS);
-
         this.io.on("connection", this.startListeners.bind(this));
         console.log("Socket IO started");
     }
@@ -37,7 +36,25 @@ export class ServerSocket {
     startListeners(socket: Socket) {
         console.info(`Message received from ${socket.id}`);
 
-        socket.on("handshake", (callback: (uid: string, users: string[], gameState: GameState, roomsState: RoomsState) => void) => {
+        socket.on("handshake", this.handleHandshake.bind(this, socket));
+
+        /** GAME SECTION */
+
+        socket.on("create_game", this.handleCreateGame.bind(this));
+        socket.on("join_game", this.handleJoinGame.bind(this));
+        socket.on("start_game", this.handleStartGame.bind(this));
+        socket.on("choose_contract", this.handleChooseContract.bind(this));
+        socket.on("card_played", this.handleCardPlayed.bind(this));
+        socket.on("gobackgame", this.handleGoBackGame.bind(this));
+
+        /** END GAME SECTION */
+
+        socket.on("disconnect", this.handleDisconnect.bind(this, socket));
+        socket.on("message", this.handleMessage.bind(this, socket));
+    }
+
+    handleHandshake(socket: Socket, callback: (uid: string, users: string[], gameState: GameState, roomsState: RoomsState) => void) {
+        
             console.log(`Handshake received from ${socket.id}`);
 
             /** Check if this is a reconnection */
@@ -71,78 +88,61 @@ export class ServerSocket {
                 users.filter((id) => id !== socket.id),
                 users
             );
-        }
-        );
+        
+    }
 
-        /** GAME SECTION */
+    handleCreateGame({ uid, socketId, pseudo }: { uid: string, socketId: string, pseudo: string }) {
+        this.game.createGame(uid, socketId, pseudo);
+        this.updateGameStateAndRoomState();
+    }
 
-        socket.on("create_game", ({ uid, socketId, pseudo }) => {
+    handleJoinGame({ uid, socketId, pseudo, roomId }: {uid: string, socketId: string, pseudo: string, roomId: string}) {
+        this.game.joinGame(uid, socketId, pseudo, roomId);
+        this.updateGameStateAndRoomState();
+    }
 
-            this.game.createGame(uid, socketId, pseudo);
-            this.updateGameStateAndRoomState();
+    handleStartGame({ roomId } : {roomId: string}) {
+        this.game.startGame(roomId);
+        this.io.emit("started_game");
+        this.updateGameStateAndRoomState();
+    }
 
-        });
-
-        socket.on("join_game", ({ uid, socketId, pseudo, roomId }) => {
-            this.game.joinGame(uid, socketId, pseudo, roomId);
-            this.updateGameStateAndRoomState();
-        });
-
-        socket.on("start_game", ({ roomId }) => {
-            this.game.startGame(roomId);
-            this.io.emit("started_game");
-            this.updateGameStateAndRoomState();
-        });
-
-        socket.on("choose_contract", ({ playerContract, contractIndex, roomId }) => {
-            console.log("choose_contract", playerContract, contractIndex, roomId)
+    handleChooseContract({ playerContract, contractIndex, roomId } : {playerContract: Player, contractIndex: number, roomId: string}) {
+        console.log("choose_contract", playerContract, contractIndex, roomId)
             this.game.chooseContract(playerContract, contractIndex, roomId);
             this.game.updateChosenContracts(playerContract, contractIndex);
-
             this.game.turnRound();
-
             this.updateGameStateAndRoomState();
-        });
+    }
 
-        socket.on("card_played", ({ cardClicked, playerCardClicked }) => {
-            this.game.cardPlayed(cardClicked, playerCardClicked)
-            this.updateGameStateAndRoomState();
-        })
+    handleCardPlayed({ cardClicked, playerCardClicked }: {cardClicked: Card, playerCardClicked: Player}) {
+        this.game.cardPlayed(cardClicked, playerCardClicked)
+        this.updateGameStateAndRoomState();
+    }
 
-        socket.on("gobackgame", ({ roomIdGoBackGame }) => {
-            this.game.goBackGame(roomIdGoBackGame);
-            this.updateGameStateAndRoomState();
-        })
+    handleGoBackGame({ roomIdGoBackGame }: {roomIdGoBackGame: string}) {
+        this.game.goBackGame(roomIdGoBackGame);
+        this.updateGameStateAndRoomState();
+    }
 
+    handleDisconnect(socket: Socket) {
+        console.info(`User disconnected: ${socket.id}`);
+        /** Remove user from users */
+        const uid = this.getUidFromSocketID(socket.id);
+        if (uid) {
+            delete this.users[uid];
+        }
+        /** Send disconnected user to all connected users */
+        this.io.emit("user_disconnected", uid);
+    }
 
-
-        /** END GAME SECTION */
-
-        socket.on("disconnect", () => {
-            console.info(`User disconnected: ${socket.id}`);
-
-            /** Remove user from users */
-            const uid = this.getUidFromSocketID(socket.id);
-            if (uid) {
-                delete this.users[uid];
-            }
-
-            /** Send disconnected user to all connected users */
-            this.io.emit("user_disconnected", uid);
-        });
-
-        socket.on("message", (message: string) => {
-            console.info(`Message received from ${socket.id}: ${message}`);
-
-            /** Send message to all connected users */
-            socket.broadcast.emit("message", message);
-        });
+    handleMessage(socket: Socket, message: string) {
+        console.info(`Message received from ${socket.id}: ${message}`);
+        /** Send message to all connected users */
+        socket.broadcast.emit("message", message);
     }
 
     updateGameStateAndRoomState() {
-        // Update gameState and emit changes to clients
-        //console.log("this.game.gameState updateGameStateAndRoomState", this.game.gameState)
-        //console.log("this.game.roomsState updateGameStateAndRoomState", this.game.roomsState)
         this.io.emit("gameState", this.game.gameState);
         this.io.emit("roomsState", this.game.roomsState);
     }

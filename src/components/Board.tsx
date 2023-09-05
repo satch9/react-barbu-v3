@@ -51,7 +51,6 @@ const Board = () => {
     //console.log("SocketState", SocketState.socket);
     //console.log("GameState state", GameState.gameState);
 
-    const [cardClickCount, setCardClickCount] = useState(0);
     const [highLightedCard, setHighLightedCard] = useState<number | undefined>(undefined)
 
     /* const isMobile = useMediaQuery({ maxWidth: 480 });*/
@@ -61,13 +60,15 @@ const Board = () => {
 
     const roomId: string | undefined = GameState.roomsState.rooms.find((room: Room) => room.players.find((player: Player) => player.socketId === SocketState.socket?.id)?.socketId === SocketState.socket?.id)?.roomId
 
+    let cardClickCount = 0;
+
     const handleCardClick = (cardIndex: number) => {
         // TODO: handle card click and update game state
         console.log(`Card clicked => card: ${cardIndex}`);
 
         const cardClicked: Card | undefined = isTheCurrentPlayer?.startedHand[cardIndex];
 
-        setCardClickCount(cardClickCount + 1);
+        cardClickCount += 1;
 
         if (cardClickCount === 1) {
             // La carte est montée du paquet
@@ -75,7 +76,7 @@ const Board = () => {
         } else if (cardClickCount === 2) {
             // La carte est jouée
             setHighLightedCard(undefined)
-            setCardClickCount(0);
+            cardClickCount = 0;
             SocketState.socket?.emit("card_played", { cardClicked: cardClicked, playerCardClicked: isTheCurrentPlayer })
         }
     };
@@ -110,7 +111,12 @@ const Board = () => {
             <div className="player-info">
 
                 {
-                    isTheGoodPlayer && <Hand cards={isTheGoodPlayer.startedHand} highlighted={highLightedCard} onCardClick={handleCardClick} />
+                    isTheGoodPlayer && 
+                    <Hand 
+                        cards={isTheGoodPlayer.startedHand} 
+                        highlighted={highLightedCard} 
+                        onCardClick={isTheCurrentPlayer ? handleCardClick: ()=>{}} 
+                    />
                 }
 
                 {
