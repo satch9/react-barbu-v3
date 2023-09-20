@@ -56,12 +56,12 @@ app.get("/ping", (_req, res) => {
 });
 
 /** Error handling */
-app.use((_req, res) => {
-    const error = new Error("Not found");
+app.use((req, res, err) => {
+    // Gère toutes les autres erreurs non traitées ici
+    console.error(err);
 
-    res.status(404).json({
-        message: error.message,
-    });
+    // Autres types d'erreurs non prévues
+    res.status(500).json({ error: 'Erreur interne du serveur' });
 });
 
 httpServer.listen(PORT, () => {

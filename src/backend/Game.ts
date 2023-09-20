@@ -1,9 +1,15 @@
-import { Card } from "./Card";
+import { ServerSocket } from "./socket";
+import CustomError from "./CustomError";
 import { Contracts } from "./Contracts";
 import { Deck } from "./Deck";
-import { ChosenContract, Contract, GameState, Player, Room, RoomsState, TurnResult } from "./gameInterface";
-import { ServerSocket } from "./socket";
 import { v4 as uuidv4 } from "uuid";
+import { customCompare } from "./utils";
+import { ChosenContract, Contract, GameState, ICard, Card, Player, Room, RoomsState, Turn } from "./gameInterface";
+
+type PartialGameState = Partial<GameState>;
+type PartialRoomsState = Partial<RoomsState>;
+
+const MAX_PLAYERS = 4;
 
 export class Game {
     private contracts: Contract[];
@@ -12,6 +18,7 @@ export class Game {
     private serverSocket: ServerSocket;
     private deck: Deck;
 
+
     constructor(serverSocket: ServerSocket, contracts: Contract[]) {
         this.serverSocket = serverSocket;
         this.contracts = contracts;
@@ -19,19 +26,25 @@ export class Game {
         this.roomsState = {
             rooms: [],
         };
-        this.deck = new Deck
+        this.deck = new Deck();
     }
 
     private initializeGameState(): GameState {
         return {
             players: [],
             currentPlayer: this.createEmptyPlayer(),
-            currentTurn: null,
+            currentTurn: {
+                dealer: this.createEmptyPlayer(),
+                startingPlayer: this.createEmptyPlayer(),
+                folds: [],
+            },
             ranking: [],
             contracts: this.contracts,
             currentContract: null,
-            turnResult: null,
-            startedGame: false
+            startedGame: false,
+            currentRound: 0,
+            isOver: false,
+
         }
     }
 
@@ -47,6 +60,8 @@ export class Game {
             isReady: false,
             isPlaying: false,
             isDisconnected: false,
+            roundScores: [],
+            position: 0,
         };
     }
 
@@ -57,7 +72,7 @@ export class Game {
             players: [],
             chosenContracts: [],
             isGameInProgress: false,
-            isFinished: false,
+            isOver: false,
             ranking: [],
             currentContract: null,
         };
@@ -80,12 +95,20 @@ export class Game {
         return Math.floor(Math.random() * 4);
     }
 
-    private updateGameState(newState: Partial<GameState>): void {
+    private updateGameState(newState: PartialGameState): void {
         this.gameState = { ...this.gameState, ...newState };
     }
 
-    private updateRoomsState(newState: Partial<RoomsState>): void {
+    private updateRoomsState(newState: PartialRoomsState): void {
         this.roomsState = { ...this.roomsState, ...newState };
+    }
+
+    private findRoomById(roomId: string): Room | undefined {
+        return this.roomsState.rooms.find((room) => room.roomId === roomId);
+    }
+
+    private findRoomBySocketId(socketId: string): Room | undefined {
+        return this.roomsState.rooms.find((room) => room.players.find(player => player.socketId === socketId));
     }
 
     public createRoom() {
@@ -109,10 +132,11 @@ export class Game {
             name: pseudo,
             socketId
         };
+        console.log("this.gameState.players", this.gameState.players);
 
         this.updateGameState({ players: [...this.gameState.players, newCreator] });
 
-        const roomForPlayer = this.roomsState.rooms.find(room => room.roomId === createdRoom.roomId);
+        const roomForPlayer = this.findRoomById(createdRoom.roomId);
 
         if (!roomForPlayer) {
             console.log(`Room with ID ${createdRoom.roomId} not found.`);
@@ -126,7 +150,7 @@ export class Game {
     public joinGame(uid: string, socketId: string, pseudo: string, roomId: string): void {
         console.log(`Join game received from =>uid: ${uid} - socketId: ${socketId} - pseudo: ${pseudo} - roomId: ${roomId}`);
 
-        const room = this.roomsState.rooms.find((room) => room.roomId === roomId);
+        const room = this.findRoomById(roomId);
 
         if (!room) {
             console.log(`Room with ID ${roomId} not found.`);
@@ -143,14 +167,20 @@ export class Game {
         this.updateGameState({ players: [...this.gameState.players, newPlayer] });
         room.players.push(newPlayer);
 
-        this.serverSocket.io.socketsJoin(roomId);
+        const playerSocket = this.serverSocket.io.sockets.sockets.get(socketId);
+
+        if (playerSocket) {
+            playerSocket.join(roomId);
+        } else {
+            console.log(`Socket with ID ${socketId} not found.`);
+        }
     }
 
 
     public startGame(roomId: string): void {
         console.log(`Start game received from => roomId: ${roomId}`);
 
-        const room = this.roomsState.rooms.find((room) => room.roomId === roomId);
+        const room = this.findRoomById(roomId);
 
         if (!room) {
             throw new Error("Room not found");
@@ -160,9 +190,13 @@ export class Game {
         this.deck.shuffle();
         this.deck.dealCardsToPlayers(room.players);
 
+        /* room.players.forEach((player) => {
+            console.log("player.startedHand", player.startedHand);
+        }) */
+
         // Update room state
-        const updatedRoom = { ...room, isGameInProgress: true, players: room.players.map(player => ({ ...player, isPlaying: true, startedHand: this.deck.sort(player.startedHand) })) };
-        this.updateRoomsState({ rooms: this.roomsState.rooms.map(r => r.roomId === roomId ? updatedRoom : r) });
+        const updatedRoom = { ...room, isGameInProgress: true, players: room.players.map(player => ({ ...player, isPlaying: true, startedHand: player.startedHand })) };
+        //this.updateRoomsState({ rooms: this.roomsState.rooms.map(r => r.roomId === roomId ? updatedRoom : r) });
 
         // Synchronize gameState players with room players
         const updatedPlayers = this.gameState.players.map(gamePlayer => {
@@ -177,7 +211,7 @@ export class Game {
         // Update gameState
         const randomCurrentPlayerIndex = this.randomCurrentPlayer();
         const currentPlayer = this.gameState.players[randomCurrentPlayerIndex];
-        const startingPlayerIndex = (randomCurrentPlayerIndex + 1) % 4;
+        const startingPlayerIndex = (randomCurrentPlayerIndex + 1) % MAX_PLAYERS;
         const currentTurn = {
             dealer: currentPlayer,
             startingPlayer: this.gameState.players[startingPlayerIndex],
@@ -185,12 +219,7 @@ export class Game {
         };
         this.updateGameState({ currentPlayer, currentTurn, startedGame: true });
 
-        // Initialize the turn result
-        this.updateGameState({ turnResult: { pickUpFold: null, secondPlace: null } });
-
     }
-
-
 
     public chooseContract(p: Player, contractIndex: number, roomId: string): void {
         console.log(
@@ -198,7 +227,7 @@ export class Game {
         );
 
         const chosenContract: Contract | undefined = this.gameState.contracts[contractIndex];
-        console.log("chosenContract", chosenContract)
+        //console.log("chosenContract", chosenContract)
 
         if (!chosenContract) return;
 
@@ -216,7 +245,7 @@ export class Game {
             successful: false,
         };
 
-        console.log("newContract", newContract)
+        //console.log("newContract", newContract)
 
 
         this.updateGameState({ currentContract: newContract });
@@ -224,6 +253,12 @@ export class Game {
 
     }
 
+    /**
+     * 
+     * @param p 
+     * @param c 
+     * @returns 
+     */
     public updateChosenContracts(p: Player, c: number) {
         const newChosenContract = {
             player: p,
@@ -236,31 +271,45 @@ export class Game {
             }
             return player;
         });
-        this.updateGameState({ players: updatedPlayers, currentPlayer: { ...this.gameState.currentPlayer, chosenContracts: [...this.gameState.currentPlayer.chosenContracts, newChosenContract] } });
+        this.updateGameState({
+            players: updatedPlayers,
+            currentPlayer: {
+                ...this.gameState.currentPlayer,
+                chosenContracts: [...this.gameState.currentPlayer.chosenContracts, newChosenContract]
+            },
+            currentRound: this.gameState.currentRound + 1,
+        });
         this.updateRoomsState({ rooms: this.roomsState.rooms.map(room => ({ ...room, chosenContracts: [...room.chosenContracts, newChosenContract], players: room.players.map(player => player.name === p.name ? { ...player, chosenContracts: [...player.chosenContracts, newChosenContract] } : player) })) });
     }
 
-    public turnRound(): void {
-        console.log("turnRound");
-        const { currentTurn, currentPlayer, players } = this.gameState;
+    /**
+     *  
+     * @returns
+     * 
+     */
+    public nextPlayer(): void {
 
-        if (!currentTurn) {
-            console.log("No current turn");
-            return;
-        }
+        const { currentPlayer, players } = this.gameState;
+        const { rooms } = this.roomsState;
 
-        const nextPlayerIndex = (players.findIndex(player => player.name === currentPlayer.name) + 1) % 4;
-        const nextPlayer = players[nextPlayerIndex];
-
-        this.updateGameState({ currentPlayer: nextPlayer });
-        this.updateRoomsState({ rooms: this.roomsState.rooms.map(room => ({ ...room, players: room.players.map(player => player.name === nextPlayer.name ? { ...player, isPlaying: true } : { ...player, isPlaying: false }) })) });
+        const currentPlayerIndex = players.findIndex(player => player.uid === currentPlayer.uid);
+        const nextPlayerIndex = (currentPlayerIndex + 1) % MAX_PLAYERS;
+        this.updateGameState({ currentPlayer: players[nextPlayerIndex] });
+        this.updateRoomsState({ rooms: rooms.map(room => ({ ...room, players: room.players.map(player => player.name === this.gameState.players[nextPlayerIndex].name ? { ...player, isPlaying: true } : { ...player, isPlaying: false }) })) });
     }
 
+
+
+    /**
+     * 
+     * @param roomIdGoBackGame 
+     * @returns 
+     */
 
     public goBackGame(roomIdGoBackGame: string): void {
         console.log(`Go back to game received from => roomId: ${roomIdGoBackGame}`);
 
-        const room = this.roomsState.rooms.find(room => room.roomId === roomIdGoBackGame);
+        const room = this.findRoomById(roomIdGoBackGame);
 
         if (!room) {
             console.log(`Room with ID ${roomIdGoBackGame} not found.`);
@@ -271,47 +320,204 @@ export class Game {
     }
 
 
+
+
     public cardPlayed(cardClicked: Card, playerClickedCards: Player): void {
-        console.log(`Carte jouée par le player: ${playerClickedCards.name} => ${cardClicked.value} de ${cardClicked.suit}`);
+        try {
+            console.log(`Carte jouée par le player: ${playerClickedCards.name} => ${cardClicked.value} de ${cardClicked.suit}`);
 
-        const updatePlayerState = (player: Player) => {
-            player.startedHand = player.startedHand.filter(card => card.value !== cardClicked.value || card.suit !== cardClicked.suit);
-            player.myFoldsDuringTurn.push(cardClicked);
-        };
+            const { players, currentTurn } = this.gameState;
 
-        const playerIndex = this.gameState.players.findIndex(player => player.name === playerClickedCards.name);
+            const playerIndex = this.findPlayerIndexByName(playerClickedCards.name);
 
-        if (playerIndex !== -1) {
-            updatePlayerState(this.gameState.players[playerIndex]);
-        }
+            console.log("playerIndex", playerIndex)
 
-        this.updateRoomsState({ rooms: this.roomsState.rooms.map(room => {
             if (playerIndex !== -1) {
-                updatePlayerState(room.players[playerIndex]);
+                this.validateCardPlay(cardClicked, playerClickedCards, currentTurn);
+                this.updatePlayerState(players[playerIndex], cardClicked);
+                this.updateRoomsStateAfterPlay(playerIndex, cardClicked);
+
+                const updatedCurrentTurnFolds: ICard[] = Array(MAX_PLAYERS);
+
+                for (let i = 0; i < MAX_PLAYERS; i++) {
+                    updatedCurrentTurnFolds[i] = currentTurn.folds[i] || null; // You can use null or another default value
+                }
+
+                updatedCurrentTurnFolds[playerIndex] = cardClicked;
+
+                if (updatedCurrentTurnFolds.filter(Boolean).length === MAX_PLAYERS) {
+
+                    updatedCurrentTurnFolds.sort(customCompare);
+
+                    // Effectuer le calcul du résultat du tour
+                    this.calculateTurnResult(updatedCurrentTurnFolds);
+
+                } else {
+                    this.updateGameState({
+                        currentTurn: {
+                            ...currentTurn,
+                            folds: updatedCurrentTurnFolds,
+                        },
+                    });
+                    this.nextPlayer();
+                }
             }
-            return room;
-        })});
 
-        if (this.gameState.currentTurn) {
-            this.gameState.currentTurn.folds.push(cardClicked);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
+            this.handleError(error, playerClickedCards.socketId)
+        }
+    }
 
-            if (this.gameState.currentTurn.folds.length === 4) {
-                this.updateGameState({ turnResult: this.calculateTurnResult() });
+    private updatePlayerState(p: Player, cardClicked: Card) {
+        p.startedHand = p.startedHand.filter(card => card.value !== cardClicked.value || card.suit !== cardClicked.suit);
+        p.myFoldsDuringTurn.push(cardClicked);
+    }
+
+    private findPlayerIndexByName(playerName: string): number {
+        const { players } = this.gameState;
+        return players.findIndex(player => player.name === playerName);
+    }
+
+    private validateCardPlay(cardClicked: Card, playerClickedCards: Player, currentTurn: Turn): void {
+        const firstCard = Object.values(currentTurn.folds)[0];
+
+        if (firstCard) {
+            if (
+                firstCard.suit !== cardClicked.suit &&
+                playerClickedCards.startedHand.filter(card => card.suit === firstCard.suit).length > 0
+            ) {
+                throw new CustomError("Vous devez jouer la même couleur que la première carte jouée", 500);
             }
         }
     }
 
+    private updateRoomsStateAfterPlay(playerIndex: number, cardClicked: Card): void {
+        this.updateRoomsState({
+            rooms: this.roomsState.rooms.map(room => {
+                if (playerIndex !== -1) {
+                    this.updatePlayerState(room.players[playerIndex], cardClicked);
+                }
+                return room;
+            })
+        });
+    }
 
-    private calculateTurnResult(): TurnResult | null {
+
+    private handleError(error: Error, socketId?: string): void {
+        console.error('Erreur dans cardPlayed:', error.message);
+        const room = this.findRoomBySocketId(socketId ?? "");
+        if (socketId && room) {
+            this.serverSocket.io.to(room.roomId).emit("error", error.message);
+        }
+    }
+
+
+    private calculateTurnResult(sortedIndexedFolds: ICard[]): void {
         const { currentTurn, currentContract, players, currentPlayer } = this.gameState;
 
-        if (currentTurn?.folds && currentContract && currentTurn.folds.length === 4) {
-            Contracts.calculateScore(players, currentPlayer, currentContract);
-            // Votre logique supplémentaire ici pour retourner le résultat du tour si nécessaire
-            return null; // Retourner le résultat ici
+        const numberOfFolds = Object.values(this.gameState.currentTurn?.folds ?? {}).filter(fold => fold !== undefined).length;
+
+        if (currentTurn?.folds && currentContract && numberOfFolds) {
+            if (currentContract.contract.name === 'Le barbu') {
+                console.log("typeof sortedIndexedFolds", typeof sortedIndexedFolds);
+                console.log("sortedIndexedFolds", sortedIndexedFolds);
+                const hasKingOfHearts = sortedIndexedFolds.some((card) => card.suit === '♥' && card.value === 'K');
+
+                if (hasKingOfHearts) {
+                    // Le roi de cœur (le barbu) est présent, calculer les points
+                    const updatedPlayers = Contracts.calculateScore(players, currentPlayer, currentContract, sortedIndexedFolds);
+
+                    console.log("updatedPlayers", updatedPlayers);
+
+                    this.updateGameState({
+                        currentTurn: {
+                            ...currentTurn,
+                            folds: [],
+                        },
+                        players: [...updatedPlayers],
+                    });
+                } else {
+                    // Le roi de cœur n'est pas présent, ne pas attribuer de points
+                    this.updateGameState({
+                        currentTurn: {
+                            ...currentTurn,
+                            folds: [],
+                        },
+                    });
+                }
+
+                this.nextRound();
+                this.nextDealer();
+            }
         }
 
-        return null;
+
+    }
+
+    public nextDealer(): void {
+
+        const { currentTurn, players } = this.gameState;
+        const { rooms } = this.roomsState;
+
+
+        const currentDealerIndex = players.findIndex(player => player.uid === currentTurn.dealer.uid)
+        const nextDealerIndex = (currentDealerIndex + 1) % MAX_PLAYERS;
+
+        this.updateGameState({
+            currentTurn: {
+                ...currentTurn,
+                dealer: players[nextDealerIndex],
+                startingPlayer: players[(nextDealerIndex + 1) % MAX_PLAYERS]
+            },
+            currentPlayer: players[nextDealerIndex]
+        });
+
+        this.updateRoomsState({
+            rooms: rooms.map(room => ({ ...room, players: room.players.map(player => player.name === this.gameState.players[nextDealerIndex].name ? { ...player, isPlaying: true } : { ...player, isPlaying: false }) }))
+        });
+    }
+
+    public nextRound(): void {
+        if (this.gameState.isOver) {
+            this.endGame();
+            return;
+        } else {
+            this.updateGameState({ currentRound: this.gameState.currentRound + 1 });
+            this.calculateRanking();
+            this.updateRoomsState({ rooms: this.roomsState.rooms.map(room => ({ ...room, isGameInProgress: false, players: room.players.map(player => ({ ...player, isPlaying: false, startedHand: [] })) })) });
+        }
+
+
+
+    }
+
+    public endGame(): void {
+        this.updateGameState({ currentRound: 0, });
+        this.updateRoomsState({ rooms: this.roomsState.rooms.map(room => ({ ...room, isOver: true })) });
+    }
+
+    public calculateRanking(): void {
+        const { players } = this.gameState;
+
+        players.sort((a, b) => b.score - a.score);
+
+        const ranking = players.map((player, index) => ({
+            uid: player.uid,
+            name: player.name,
+            startedHand: player.startedHand,
+            myFoldsDuringTurn: player.myFoldsDuringTurn,
+            chosenContracts: player.chosenContracts,
+            socketId: player.socketId,
+            score: player.score,
+            isReady: player.isReady,
+            isPlaying: player.isPlaying,
+            isDisconnected: player.isDisconnected,
+            roundScores: player.roundScores,
+            position: index + 1, // La première place est 1, la deuxième est 2, etc.
+        }));
+
+        this.updateGameState({ ranking });
     }
 
 

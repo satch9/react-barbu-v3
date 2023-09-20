@@ -1,8 +1,10 @@
 import { Card } from "./Card";
 import { Player } from "./gameInterface";
+import { customCompare } from "./utils";
 
 export class Deck {
     cards: Card[] | undefined;
+
 
     constructor(cardsClass?: Card[]) {
         if (cardsClass === undefined) {
@@ -42,19 +44,31 @@ export class Deck {
         return playerCards.sort((a, b) => a.suit.localeCompare(b.suit) || a.value.localeCompare(b.value));
     }
 
+
+
     dealCardsToPlayers(players: Player[]) {
         const numPlayers = players.length;
         const numCardsPerPlayer = Math.floor(this.numberOfCards! / numPlayers);
+
+        //console.log('numPlayers', numPlayers);
+        //console.log('numCardsPerPlayer', numCardsPerPlayer);
 
         players.forEach(player => {
             const hand = [];
             for (let i = 0; i < numCardsPerPlayer; i++) {
                 const card = this.cards?.pop();
+
                 if (card) {
                     hand.push(card);
                 }
             }
+            //console.log('hand', hand)
+
+            hand.sort(customCompare)
+            //console.log('hand deck dealCardsToPlayers', hand);
+
             player.startedHand = hand;
+            //console.log('player.startedHand deck dealCardsToPlayers', player.startedHand);
         });
     }
 }

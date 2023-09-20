@@ -23,7 +23,7 @@ export type Action =
     { type: 'REMOVE_USER'; payload: string }
 
 const socketReducer = (state: ISocketContextState, action: Action): ISocketContextState => {
-    console.log(`Message received - Action: ${action.type} - Payload:`, action.payload);
+    //console.log(`Message received - Action: ${action.type} - Payload:`, action.payload);
 
     switch (action.type) {
         case 'UPDATE_SOCKET':

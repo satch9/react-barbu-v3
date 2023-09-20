@@ -89,7 +89,7 @@ const ListOfGames = () => {
     }
 
     const handleStartGame = (roomIdStartGame: string) => {
-        console.log("roomIdStartGame", roomIdStartGame);
+        //console.log("roomIdStartGame", roomIdStartGame);
         SocketState.socket?.emit("start_game", { roomId: roomIdStartGame });
     }
 

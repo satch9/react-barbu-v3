@@ -3,9 +3,8 @@ import { Socket, Server as ServerSocketIo, ServerOptions } from "socket.io";
 import { v4 as uuidv4 } from "uuid";
 import { Game } from "./Game";
 import { Contracts } from "./Contracts";
-import { Contract, GameState, Player, RoomsState } from "./gameInterface";
+import { GameState, Player, RoomsState } from "./gameInterface";
 import { Card } from "./Card";
-//import parse from 'json-stringify-safe'
 
 export class ServerSocket {
     public static instance: ServerSocket;
@@ -54,41 +53,41 @@ export class ServerSocket {
     }
 
     handleHandshake(socket: Socket, callback: (uid: string, users: string[], gameState: GameState, roomsState: RoomsState) => void) {
-        
-            console.log(`Handshake received from ${socket.id}`);
 
-            /** Check if this is a reconnection */
-            const reconnected = Object.values(this.users).includes(socket.id);
-            console.log("reconnected", reconnected);
-            if (reconnected) {
-                console.info("-------------------------");
-                console.info("This user has reconnected");
-                console.info("-------------------------");
+        console.log(`Handshake received from ${socket.id}`);
 
-                const uid = this.getUidFromSocketID(socket.id);
-                const users = Object.values(this.users);
+        /** Check if this is a reconnection */
+        const reconnected = Object.values(this.users).includes(socket.id);
+        console.log("reconnected", reconnected);
+        if (reconnected) {
+            console.info("-------------------------");
+            console.info("This user has reconnected");
+            console.info("-------------------------");
 
-                if (uid) {
-                    console.info("Sending callback for reconnect ...");
-
-                    callback(uid, users, this.game.gameState, this.game.roomsState);
-                    return;
-                }
-            }
-
-            const uid = uuidv4();
-            this.users[uid] = socket.id;
-
+            const uid = this.getUidFromSocketID(socket.id);
             const users = Object.values(this.users);
 
-            callback(uid, users, this.game.gameState, this.game.roomsState);
+            if (uid) {
+                console.info("Sending callback for reconnect ...");
 
-            this.sendMessage(
-                "user_connected",
-                users.filter((id) => id !== socket.id),
-                users
-            );
-        
+                callback(uid, users, this.game.gameState, this.game.roomsState);
+                return;
+            }
+        }
+
+        const uid = uuidv4();
+        this.users[uid] = socket.id;
+
+        const users = Object.values(this.users);
+
+        callback(uid, users, this.game.gameState, this.game.roomsState);
+
+        this.sendMessage(
+            "user_connected",
+            users.filter((id) => id !== socket.id),
+            users
+        );
+
     }
 
     handleCreateGame({ uid, socketId, pseudo }: { uid: string, socketId: string, pseudo: string }) {
@@ -96,31 +95,31 @@ export class ServerSocket {
         this.updateGameStateAndRoomState();
     }
 
-    handleJoinGame({ uid, socketId, pseudo, roomId }: {uid: string, socketId: string, pseudo: string, roomId: string}) {
+    handleJoinGame({ uid, socketId, pseudo, roomId }: { uid: string, socketId: string, pseudo: string, roomId: string }) {
         this.game.joinGame(uid, socketId, pseudo, roomId);
         this.updateGameStateAndRoomState();
     }
 
-    handleStartGame({ roomId } : {roomId: string}) {
+    handleStartGame({ roomId }: { roomId: string }) {
         this.game.startGame(roomId);
         this.io.emit("started_game");
         this.updateGameStateAndRoomState();
     }
 
-    handleChooseContract({ playerContract, contractIndex, roomId } : {playerContract: Player, contractIndex: number, roomId: string}) {
-        console.log("choose_contract", playerContract, contractIndex, roomId)
-            this.game.chooseContract(playerContract, contractIndex, roomId);
-            this.game.updateChosenContracts(playerContract, contractIndex);
-            this.game.turnRound();
-            this.updateGameStateAndRoomState();
+    handleChooseContract({ playerContract, contractIndex, roomId }: { playerContract: Player, contractIndex: number, roomId: string }) {
+        //console.log("choose_contract", playerContract, contractIndex, roomId)
+        this.game.chooseContract(playerContract, contractIndex, roomId);
+        this.game.updateChosenContracts(playerContract, contractIndex);
+        this.game.nextPlayer();
+        this.updateGameStateAndRoomState();
     }
 
-    handleCardPlayed({ cardClicked, playerCardClicked }: {cardClicked: Card, playerCardClicked: Player}) {
+    handleCardPlayed({ cardClicked, playerCardClicked }: { cardClicked: Card, playerCardClicked: Player }) {
         this.game.cardPlayed(cardClicked, playerCardClicked)
         this.updateGameStateAndRoomState();
     }
 
-    handleGoBackGame({ roomIdGoBackGame }: {roomIdGoBackGame: string}) {
+    handleGoBackGame({ roomIdGoBackGame }: { roomIdGoBackGame: string }) {
         this.game.goBackGame(roomIdGoBackGame);
         this.updateGameStateAndRoomState();
     }

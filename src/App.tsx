@@ -14,11 +14,15 @@ const App = () => {
   const { SocketState, SocketDispatch } = useSocketContext();
   const { GameState, GameDispatch } = useGameContext();
 
-  console.log("SocketState", SocketState);
-  console.log("GameState state", GameState.gameState);
-  console.log("GameState rooms state", GameState.roomsState);
-  //console.log("GameDispatch", GameDispatch);
-  //console.log("SocketDispatch", SocketDispatch);
+
+  useEffect(() => {
+    console.log("SocketState", SocketState);
+    console.log("GameState state", GameState.gameState);
+    console.log("GameState rooms state", GameState.roomsState);
+    //console.log("GameDispatch", GameDispatch);
+    //console.log("SocketDispatch", SocketDispatch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [GameState]);
 
   const socket = useSocket("http://localhost:4003", {
     autoConnect: false,
@@ -83,12 +87,12 @@ const App = () => {
     // ----------------------------------------- //
 
     socket.on("gameState", (gameState: GameState) => {
-      console.log("gameState", gameState);
+      //console.log("gameState", gameState);
       GameDispatch({ type: "SET_GAME_STATE", payload: gameState });
     });
 
     socket.on("roomsState", (roomsState: RoomsState) => {
-      console.log("roomsState", roomsState);
+      //console.log("roomsState", roomsState);
       GameDispatch({ type: "SET_ROOMS_STATE", payload: roomsState });
     });
 
@@ -105,7 +109,7 @@ const App = () => {
         uid: string,
         players: string[],
       ) => {
-        console.log("User handshake callback message received");
+        //console.log("User handshake callback message received");
         SocketDispatch({ type: "UPDATE_UID", payload: uid });
         SocketDispatch({ type: "UPDATE_USERS", payload: players });
         GameDispatch({ type: "SET_GAME_STATE", payload: GameState.gameState });
@@ -121,7 +125,7 @@ const App = () => {
   return (
     <div className='app'>
       {
-        GameState.gameState.startedGame ? <Board />: <ListOfGames />
+        GameState.gameState.startedGame ? <Board /> : <ListOfGames />
       }
       <p className="messageError">{messageError && messageError}</p>
       <div className="global">

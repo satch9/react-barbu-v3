@@ -12,6 +12,8 @@ interface HandProps {
 }
 
 const Hand = ({ cards, highlighted, onCardClick }: HandProps) => {
+  //console.log("cards", cards)
+
   return (
     <div className="hand">
       {cards.map((card, index) => (

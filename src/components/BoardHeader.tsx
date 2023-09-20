@@ -6,7 +6,7 @@ const BoardHeader = () => {
   return (
     <div className="board-header">
       <h2>{`${GameState.gameState.currentTurn?.dealer.name} a choisi le contrat : ${GameState.gameState.currentContract?.contract.name}`}</h2>
-      <p>{`C'est à ${GameState.gameState.currentTurn?.startingPlayer.name} de poser sa carte!`}</p>
+      <p>{`C'est à ${GameState.gameState.currentPlayer.name} de poser sa carte!`}</p>
     </div>
   );
 };

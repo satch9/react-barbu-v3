@@ -1,4 +1,4 @@
-import { Player, ChosenContract } from "./gameInterface";
+import { Player, ChosenContract, ICard } from "./gameInterface";
 
 export class Contracts {
     static CONTRACTS = [
@@ -10,15 +10,15 @@ export class Contracts {
         { name: 'Réussite', maxNumberOfTurns: 0, description: 'Le joueur qui possède qui gagne la réussite remporte 100 et le deuxième 50 points', value: [100, 50] }
     ];
 
-    static calculateScore(players: Player[], currentPlayer: Player, currentContract: ChosenContract | null): Player[] {
+    static calculateScore(players: Player[], currentPlayer: Player, currentContract: ChosenContract | null, sortedIndexedFolds: ICard[]): Player[] {
         if (currentContract) {
             const contract = Contracts.CONTRACTS.find((c) => c.name === currentContract.contract.name);
             if (contract) {
                 switch (contract.name) {
                     case 'Le barbu':
                         return Array.isArray(contract.value)
-                            ? this.calculateScoreBarbu(players, currentPlayer, contract.value[0])
-                            : this.calculateScoreBarbu(players, currentPlayer, contract.value as number);
+                            ? this.calculateScoreBarbu(players, currentPlayer, contract.value[0], sortedIndexedFolds)
+                            : this.calculateScoreBarbu(players, currentPlayer, contract.value as number, sortedIndexedFolds);
                     case 'Pas de coeurs':
                         return Array.isArray(contract.value)
                             ? this.calculateScorePasDeCoeurs(players, currentPlayer, contract.value[0])
@@ -43,17 +43,91 @@ export class Contracts {
         return players;
     }
 
-    static calculateScoreBarbu(players: Player[], currentPlayer: Player, contractValue: number) {
-        return players.map((player) => {
-            if (player.uid === currentPlayer.uid) {
-                player.myFoldsDuringTurn.forEach((card) => {
-                    if (card.suit === '♥' && card.value === 'K') {
+    static calculateScoreBarbu(players: Player[], currentPlayer: Player, contractValue: number, sortedIndexedFolds: ICard[]) {
+        return players.map((player, indexPlayer) => {
+            const foundIndex = parseInt(Object.keys(sortedIndexedFolds)[0]);
 
-                        player.score = player.score + contractValue;
+            if (indexPlayer === foundIndex) {
+                const foldsArray = Object.values(sortedIndexedFolds);
+                player.myFoldsDuringTurn = [...player.myFoldsDuringTurn, ...foldsArray];
+                //console.log("player.myFoldsDuringTurn", player.myFoldsDuringTurn);
 
+                // Point 1: Toutes les cartes sont des cœurs et la plus grande est le Roi de cœur (♥K)
+                if (
+                    player.myFoldsDuringTurn.every((card) => card.suit === '♥') &&
+                    player.myFoldsDuringTurn[0].value === 'K'
+                ) {
+                    console.log("player.score point1", player.score);
+                    console.log("contractValue point1", contractValue);
+                    player.score += contractValue;
+                }
+
+                // Point 2: Toutes les cartes sont des cœurs, mais la plus grande n'est pas le Roi de cœur (♥K)
+                if (
+                    player.myFoldsDuringTurn.every((card) => card.suit === '♥') &&
+                    player.myFoldsDuringTurn[0].value !== 'K' &&
+                    player.myFoldsDuringTurn.some((card) => card.suit === '♥' && card.value === 'K')
+                ) {
+                    const highestCardPlayer = players.reduce((highest, p) => {
+                        const highestCard = highest.myFoldsDuringTurn[0];
+                        const playerHighestCard = p.myFoldsDuringTurn[0];
+
+                        if (highestCard && playerHighestCard) {
+                            if (playerHighestCard.suit === '♥' && playerHighestCard.value > highestCard.value) {
+                                return p;
+                            }
+                        }
+                        return highest;
+                    });
+
+                    console.log("highestCardPlayer", highestCardPlayer)
+
+                    if (highestCardPlayer.uid === player.uid) {
+                        console.log("highestCardPlayer.score point2", highestCardPlayer.score);
+                        console.log("contractValue point2", contractValue);
+                        highestCardPlayer.score += contractValue;
                     }
-                });
+                }
+
+                // Point 3: le Roi de cœur (♥K) est parmi les 4 cartes mais 3 d'entre elles ne sont pas des cœurs
+                if (
+                    player.myFoldsDuringTurn.some((card) => card.suit === '♥' && card.value === 'K') &&
+                    player.myFoldsDuringTurn.filter((card) => card.suit === '♥').length === 1 &&
+                    player.myFoldsDuringTurn.filter((card) => card.suit !== '♥').length === 3 &&
+                    player.myFoldsDuringTurn[0].value !== 'K'
+                ) {
+                    const highestCardPlayer = players.reduce((highest, p) => {
+                        const highestCard = highest.myFoldsDuringTurn[0];
+                        const playerHighestCard = p.myFoldsDuringTurn[0];
+
+                        if (highestCard && playerHighestCard) {
+                            if (playerHighestCard.suit === '♥' && playerHighestCard.value > highestCard.value) {
+                                return p;
+                            }
+                        }
+                        return highest;
+                    });
+
+                    if (highestCardPlayer.uid === player.uid) {
+                        console.log("highestCardPlayer.score point3", highestCardPlayer.score);
+                        console.log("contractValue point3", contractValue);
+                        highestCardPlayer.score += contractValue;
+                    }
+                }
+
+                // Point 4: toutes les cartes sont de couleur différente et aucune n'est un cœur
+                // vérifier si dans chaque couleur quelle est la carte la plus haute
+                if (
+                    player.myFoldsDuringTurn.every((card) => card.suit !== '♥')
+                ) {
+                    console.log("point4")
+
+                }
+
+
             }
+
+            console.log("player.score", player.score)
             return player;
         });
     }

@@ -266,7 +266,7 @@ tr:nth-child(even) {
     padding: 20px;
 }
 
-.hand-card {
+.hand-card, .played-card {
     width: 60px;
     height: 60px;
     background-color: #fff;
@@ -287,7 +287,7 @@ tr:nth-child(even) {
     transition: transform 0.2s ease-in-out;
 }
 
-.hand-card .suit {
+.hand-card .suit, .played-card .suit {
     position: absolute;
     top: 5px;
     /* Ajustez la position verticale selon vos besoins */
@@ -348,6 +348,14 @@ tr:nth-child(even) {
     text-align: center;
     font-size: 1.5rem;
     color: #fff;
+}
+
+.played-cards{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    width: 50%;
+    margin: 20px auto;
 }
 
 /* .board-area-play {
@@ -486,6 +494,45 @@ tr:nth-child(even) {
 
 .card-black {
     color: black;
+}
+
+.ranking{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.ranking-table {
+    border-collapse: collapse;
+    width: 80%; /* Largeur du tableau */
+    max-width: 800px; /* Largeur maximale du tableau */
+    background-color: #fff; /* Couleur de fond du tableau */
+    border: 2px solid #333; /* Bordure du tableau */
+  }
+  
+.ranking-table th,
+.ranking-table td {
+padding: 8px 12px;
+text-align: left;
+}
+
+.ranking-table th {
+background-color: #333; /* Couleur de fond de l'en-tête */
+color: #fff; /* Couleur du texte de l'en-tête */
+}
+
+.ranking-table tbody tr:nth-child(even) {
+background-color: #f2f2f2; /* Couleur de fond des lignes paires */
+}
+
+.ranking-table tbody tr:hover {
+background-color: #ddd; /* Couleur de fond au survol */
+}
+
+.ranking-table li{
+    list-style-type: none;
+    margin-bottom: 10px;
 }
 
 /* Medias queries pour affichage tablette en orientation portrait */

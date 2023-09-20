@@ -20,13 +20,44 @@ const defaultGameContextState: IGameContextState = {
             isReady: false,
             isPlaying: false,
             isDisconnected: false,
+            roundScores: [],
         },
         currentContract: null,
-        currentTurn: null,
-        turnResult: null,
+        currentTurn: {
+            dealer: {
+                uid: "",
+                name: "",
+                startedHand: [],
+                myFoldsDuringTurn: [],
+                chosenContracts: [],
+                socketId: "",
+                score: 0,
+                isReady: false,
+                isPlaying: false,
+                isDisconnected: false,
+                roundScores: [],
+            },
+            startingPlayer: {
+                uid: "",
+                name: "",
+                startedHand: [],
+                myFoldsDuringTurn: [],
+                chosenContracts: [],
+                socketId: "",
+                score: 0,
+                isReady: false,
+                isPlaying: false,
+                isDisconnected: false,
+                roundScores: [],
+            },
+            folds: [],
+
+        },
         ranking: [],
         contracts: [],
         startedGame: false,
+        currentRound: 0,
+        isOver: false,
     },
     roomsState: {
         rooms: [],
@@ -43,8 +74,8 @@ export type Action =
     | { type: 'GAME_STARTED'; payload: boolean }
 
 const gameReducer = (state: IGameContextState, action: Action): IGameContextState => {
-    console.log('gameReducers - state:', state);
-    console.log(`Message received - Action: ${action.type} - Payload:`, action.payload);
+    //console.log('gameReducers - state:', state);
+    //console.log(`Message received - Action: ${action.type} - Payload:`, action.payload);
 
     switch (action.type) {
         case 'SET_GAME_STATE':
