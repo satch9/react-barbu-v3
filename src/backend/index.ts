@@ -15,7 +15,7 @@ new ServerSocket(httpServer);
 
 /** Enable CORS with specific options */
 app.use(cors({
-    origin: "http://localhost:5173", // Frontend URL
+    origin: true, // Allow all origins in Bolt environment
     methods: ["GET", "POST"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"]
