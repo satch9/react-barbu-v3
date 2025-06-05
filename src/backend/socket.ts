@@ -22,7 +22,11 @@ export class ServerSocket {
                 origin: "*",
                 methods: ["GET", "POST"],
                 credentials: true,
+                allowedHeaders: ["Content-Type", "Authorization"]
             },
+            pingTimeout: 60000,
+            pingInterval: 25000,
+            transports: ['websocket', 'polling']
         };
 
         this.io = new ServerSocketIo(httpServer, options);
@@ -53,7 +57,6 @@ export class ServerSocket {
     }
 
     handleHandshake(socket: Socket, callback: (uid: string, users: string[], gameState: GameState, roomsState: RoomsState) => void) {
-
         console.log(`Handshake received from ${socket.id}`);
 
         /** Check if this is a reconnection */
@@ -87,7 +90,6 @@ export class ServerSocket {
             users.filter((id) => id !== socket.id),
             users
         );
-
     }
 
     handleCreateGame({ uid, socketId, pseudo }: { uid: string, socketId: string, pseudo: string }) {
@@ -107,7 +109,6 @@ export class ServerSocket {
     }
 
     handleChooseContract({ playerContract, contractIndex, roomId }: { playerContract: Player, contractIndex: number, roomId: string }) {
-        //console.log("choose_contract", playerContract, contractIndex, roomId)
         this.game.chooseContract(playerContract, contractIndex, roomId);
         this.game.updateChosenContracts(playerContract, contractIndex);
         this.game.nextPlayer();
