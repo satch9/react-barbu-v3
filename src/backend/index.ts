@@ -5,7 +5,7 @@ import { ServerSocket } from "./socket";
 
 const app = express();
 
-const PORT = process.env.PORT ;
+const PORT = process.env.PORT || 4003;
 
 /** Server handling */
 const httpServer = http.createServer(app);
