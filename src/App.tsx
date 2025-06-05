@@ -14,7 +14,6 @@ const App = () => {
   const { SocketState, SocketDispatch } = useSocketContext();
   const { GameState, GameDispatch } = useGameContext();
 
-
   useEffect(() => {
     console.log("SocketState", SocketState);
     console.log("GameState state", GameState.gameState);
@@ -24,7 +23,7 @@ const App = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [GameState]);
 
-  const socket = useSocket("http://localhost:4003", {
+  const socket = useSocket(`http://${window.location.hostname}:4003`, {
     autoConnect: false,
     reconnectionAttempts: 5,
     reconnectionDelay: 5000,

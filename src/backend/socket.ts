@@ -19,7 +19,7 @@ export class ServerSocket {
         const options: Partial<ServerOptions> = {
             serveClient: false,
             cors: {
-                origin: "http://localhost:5173",
+                origin: "*",
                 methods: ["GET", "POST"],
                 credentials: true,
             },
