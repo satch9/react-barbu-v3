@@ -16,10 +16,13 @@ class SocketService {
 
   connect(options = {}) {
     if (!this.socket) {
-      this.socket = io('/', {
+      const host = window.location.hostname;
+      this.socket = io(`http://${host}:4003`, {
         autoConnect: false,
         reconnectionAttempts: 5,
         reconnectionDelay: 5000,
+        transports: ['websocket', 'polling'],
+        withCredentials: true,
         ...options
       });
     }
