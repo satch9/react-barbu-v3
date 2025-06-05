@@ -1,20 +1,45 @@
-import { useEffect, useRef } from "react";
-import io, { ManagerOptions, SocketOptions, Socket } from "socket.io-client";
+import { useEffect } from 'react';
+import socketService from '../services/socketService';
+import { useSocketContext } from '../utils/socketUtils';
+import { useGameContext } from '../utils/gameUtils';
 
-export const useSocket = (uri: string, opts?: Partial<ManagerOptions & SocketOptions> | undefined): Socket => {
-    const { current: socket } = useRef(io(uri, {
-        ...opts,
-        transports: ['websocket', 'polling'],
-        withCredentials: true,
-        forceNew: true,
-        timeout: 10000
-    }));
+export const useSocketSetup = () => {
+  const { SocketDispatch } = useSocketContext();
+  const { GameDispatch } = useGameContext();
 
-    useEffect(() => {
-        return () => {
-            if (socket) socket.close();
-        }
-    }, [socket]);
+  useEffect(() => {
+    const socket = socketService.connect();
+    SocketDispatch({ type: "UPDATE_SOCKET", payload: socket });
 
-    return socket;
-}
+    socketService.setupEventListeners({
+      onUserConnected: (players) => {
+        SocketDispatch({ type: "UPDATE_USERS", payload: players });
+      },
+      onUserDisconnected: (uid) => {
+        SocketDispatch({ type: "REMOVE_USER", payload: uid });
+      },
+      onGameState: (gameState) => {
+        GameDispatch({ type: "SET_GAME_STATE", payload: gameState });
+      },
+      onRoomsState: (roomsState) => {
+        GameDispatch({ type: "SET_ROOMS_STATE", payload: roomsState });
+      },
+      onStartedGame: () => {
+        GameDispatch({ type: "GAME_STARTED", payload: true });
+      },
+      onError: (error) => {
+        console.error("Socket error:", error);
+      }
+    });
+
+    socketService.sendHandshake((uid, players) => {
+      SocketDispatch({ type: "UPDATE_UID", payload: uid });
+      SocketDispatch({ type: "UPDATE_USERS", payload: players });
+    });
+
+    return () => {
+      socketService.removeEventListeners();
+      socketService.disconnect();
+    };
+  }, [SocketDispatch, GameDispatch]);
+};
