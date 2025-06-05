@@ -16,12 +16,13 @@ class SocketService {
 
   connect(options = {}) {
     if (!this.socket) {
-      const host = window.location.hostname;
-      this.socket = io(`http://${host}:4003`, {
+      // Connect to the current origin instead of explicit host/port
+      this.socket = io({
         autoConnect: false,
         reconnectionAttempts: 5,
         reconnectionDelay: 5000,
         transports: ['websocket', 'polling'],
+        path: '/socket.io', // Explicitly set the Socket.IO path
         withCredentials: true,
         ...options
       });
