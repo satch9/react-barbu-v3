@@ -6,10 +6,15 @@ export default defineConfig({
   server: {
     proxy: {
       '/socket.io': {
-        target: 'http://localhost:4003',
+        target: `http://${process.env.HOSTNAME || 'localhost'}:4003`,
         ws: true,
         changeOrigin: true,
+        secure: false
       },
     },
-  },
+    host: true,
+    hmr: {
+      clientPort: 443
+    }
+  }
 })
