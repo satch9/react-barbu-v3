@@ -13,22 +13,13 @@ const httpServer = http.createServer(app);
 /** Start the socket*/
 new ServerSocket(httpServer);
 
-/** Enable CORS */
-app.use(cors())
-
-/** Log the request */
-app.use((req, res, next) => {
-    console.info(
-        `METHOD: [${req.method}] - URL: [${req.url}] - IP: [${req.socket.remoteAddress}]`
-    );
-    res.on("finish", () => {
-        console.info(
-            `METHOD: [${req.method}] - URL: [${req.url}] - STATUS: [${res.statusCode}] - IP: [${req.socket.remoteAddress}]`
-        );
-    });
-
-    next();
-});
+/** Enable CORS with specific options */
+app.use(cors({
+    origin: "http://localhost:5173", // Frontend URL
+    methods: ["GET", "POST"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 /** Parse the body of the request */
 app.use(express.urlencoded({ extended: true }));
