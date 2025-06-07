@@ -31,12 +31,9 @@ app.get("/ping", (_req, res) => {
 });
 
 /** Error handling */
-app.use((req, res, err) => {
-    // Gère toutes les autres erreurs non traitées ici
-    console.error(err);
-
-    // Autres types d'erreurs non prévues
-    res.status(500).json({ error: 'Erreur interne du serveur' });
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error(err);
+  res.status(500).json({ error: "Erreur interne du serveur" });
 });
 
 httpServer.listen(PORT, () => {
