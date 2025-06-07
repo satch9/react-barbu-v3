@@ -8,9 +8,11 @@ export default defineConfig({
       '/socket.io': {
         target: 'http://localhost:4003',
         ws: true,
-        changeOrigin: true,
-        secure: false
       },
+      '/api':{
+        target:'http://localhost:4003',
+        changeOrigin: true,
+      }
     },
     host: '0.0.0.0',
     port: 5173,
