@@ -59,31 +59,15 @@ export class ServerSocket {
     handleHandshake(socket: Socket, callback: (uid: string, users: string[], gameState: GameState, roomsState: RoomsState) => void) {
         console.log(`Handshake received from ${socket.id}`);
 
-        /** Check if this is a reconnection */
-        const reconnected = Object.values(this.users).includes(socket.id);
-        console.log("reconnected", reconnected);
-        if (reconnected) {
-            console.info("-------------------------");
-            console.info("This user has reconnected");
-            console.info("-------------------------");
-
-            const uid = this.getUidFromSocketID(socket.id);
-            const users = Object.values(this.users);
-
-            if (uid) {
-                console.info("Sending callback for reconnect ...");
-
-                callback(uid, users, this.game.gameState, this.game.roomsState);
-                return;
-            }
-        }
-
         const uid = uuidv4();
         this.users[uid] = socket.id;
-
         const users = Object.values(this.users);
 
         callback(uid, users, this.game.gameState, this.game.roomsState);
+
+        // Envoie l'état courant directement au nouveau socket (utile si une partie est en cours)
+        socket.emit("gameState", this.game.gameState);
+        socket.emit("roomsState", this.game.roomsState);
 
         this.sendMessage(
             "user_connected",
