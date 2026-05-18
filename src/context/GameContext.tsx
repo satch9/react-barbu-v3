@@ -6,57 +6,37 @@ export interface IGameContextState {
     roomsState: RoomsState;
 }
 
+const emptyPlayer = {
+    uid: "",
+    name: "",
+    startedHand: [],
+    myFoldsDuringTurn: [],
+    chosenContracts: [],
+    socketId: "",
+    score: 0,
+    isReady: false,
+    isPlaying: false,
+    isDisconnected: false,
+    roundScores: [],
+    position: 0,
+};
+
 const defaultGameContextState: IGameContextState = {
     gameState: {
         players: [],
-        currentPlayer: {
-            uid: "",
-            name: "",
-            startedHand: [],
-            myFoldsDuringTurn: [],
-            chosenContracts: [],
-            socketId: "",
-            score: 0,
-            isReady: false,
-            isPlaying: false,
-            isDisconnected: false,
-            roundScores: [],
-        },
+        currentPlayer: { ...emptyPlayer },
         currentContract: null,
         currentTurn: {
-            dealer: {
-                uid: "",
-                name: "",
-                startedHand: [],
-                myFoldsDuringTurn: [],
-                chosenContracts: [],
-                socketId: "",
-                score: 0,
-                isReady: false,
-                isPlaying: false,
-                isDisconnected: false,
-                roundScores: [],
-            },
-            startingPlayer: {
-                uid: "",
-                name: "",
-                startedHand: [],
-                myFoldsDuringTurn: [],
-                chosenContracts: [],
-                socketId: "",
-                score: 0,
-                isReady: false,
-                isPlaying: false,
-                isDisconnected: false,
-                roundScores: [],
-            },
+            dealer: { ...emptyPlayer },
+            startingPlayer: { ...emptyPlayer },
             folds: [],
-
+            ledSuit: null,
         },
         ranking: [],
         contracts: [],
         startedGame: false,
         currentRound: 0,
+        currentTrick: 0,
         isOver: false,
     },
     roomsState: {

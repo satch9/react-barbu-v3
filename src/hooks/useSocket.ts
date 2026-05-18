@@ -32,9 +32,11 @@ export const useSocketSetup = () => {
       }
     });
 
-    socketService.sendHandshake((uid, players) => {
+    socketService.sendHandshake((uid, players, gameState, roomsState) => {
       SocketDispatch({ type: "UPDATE_UID", payload: uid });
       SocketDispatch({ type: "UPDATE_USERS", payload: players });
+      if (gameState) GameDispatch({ type: "SET_GAME_STATE", payload: gameState });
+      if (roomsState) GameDispatch({ type: "SET_ROOMS_STATE", payload: roomsState });
     });
 
     return () => {

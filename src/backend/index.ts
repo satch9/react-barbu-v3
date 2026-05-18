@@ -31,7 +31,7 @@ app.get("/ping", (_req, res) => {
 });
 
 /** Error handling */
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
   res.status(500).json({ error: "Erreur interne du serveur" });
 });

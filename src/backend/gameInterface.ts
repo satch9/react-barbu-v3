@@ -19,7 +19,8 @@ export type Card = {
 export interface Turn {
     dealer: Player; // Joueur qui a décidé du contrat
     startingPlayer: Player; // Joueur qui suit le playerDealer
-    folds: ICard[]; // Pli en cours
+    folds: (ICard | null)[]; // Pli en cours (null = joueur n'a pas encore joué)
+    ledSuit: string | null; // Couleur de la première carte du pli en cours
 }
 
 // Ajoutez ces interfaces pour gérer les contrats choisis par les joueurs
@@ -45,7 +46,8 @@ export interface GameState {
     ranking: Player[];
     contracts: Contract[];
     startedGame: boolean;
-    currentRound: number; // Ajout de la manche en cours
+    currentRound: number; // Manche en cours (0-indexed)
+    currentTrick: number; // Pli en cours dans la manche (0-12)
     isOver: boolean; // La partie est terminée
 }
 

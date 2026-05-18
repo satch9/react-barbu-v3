@@ -3,14 +3,14 @@
   suit: string;
 } */
 
-import { Card } from "../backend/gameInterface";
+import { ICard } from "../backend/gameInterface";
 
 interface PlayedCardsProps {
-  cards: Card[];
+  cards: (ICard | null)[];
 }
 
 const PlayedCards = ({ cards }: PlayedCardsProps) => {
-  const nonNullCards = cards.filter((card) => card !== null);
+  const nonNullCards = cards.filter((card): card is ICard => card !== null);
   return (
     <div className="played-cards">
       {nonNullCards.map((card, index) => (

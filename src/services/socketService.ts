@@ -81,7 +81,7 @@ class SocketService {
     this.socket.io.removeAllListeners();
   }
 
-  sendHandshake(callback: (uid: string, players: string[]) => void) {
+  sendHandshake(callback: (uid: string, players: string[], gameState: import('../backend/gameInterface').GameState, roomsState: import('../backend/gameInterface').RoomsState) => void) {
     if (!this.socket) return;
     this.socket.emit("handshake", callback);
   }
