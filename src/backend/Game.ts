@@ -175,21 +175,25 @@ export class Game {
         this.deck.shuffle();
         this.deck.dealCardsToPlayers(room.players);
 
-        // Synchronise les mains dans gameState
-        const updatedPlayers = this.gameState.players.map(gamePlayer => {
-            const roomPlayer = room.players.find(p => p.socketId === gamePlayer.socketId);
-            return roomPlayer ? { ...gamePlayer, startedHand: [...roomPlayer.startedHand] } : gamePlayer;
-        });
+        // Réinitialise gameState.players avec UNIQUEMENT les joueurs de la room
+        // (évite l'accumulation de joueurs de sessions précédentes)
+        const gamePlayers = room.players.map(p => ({
+            ...p,
+            startedHand: [...p.startedHand],
+            myFoldsDuringTurn: [],
+            chosenContracts: [],
+            score: 0,
+            roundScores: [],
+            isPlaying: true,
+        }));
 
         const dealerIndex = Math.floor(Math.random() * MAX_PLAYERS);
-        const dealer = updatedPlayers[dealerIndex];
-        const startingPlayer = updatedPlayers[(dealerIndex + 1) % MAX_PLAYERS];
-
-        const playersStarted = updatedPlayers.map(p => ({ ...p, isPlaying: true }));
+        const dealer = gamePlayers[dealerIndex];
+        const startingPlayer = gamePlayers[(dealerIndex + 1) % MAX_PLAYERS];
 
         this.updateGameState({
-            players: playersStarted,
-            currentPlayer: playersStarted[dealerIndex],
+            players: gamePlayers,
+            currentPlayer: gamePlayers[dealerIndex],
             currentTurn: {
                 dealer,
                 startingPlayer,
@@ -200,12 +204,14 @@ export class Game {
             currentRound: 0,
             currentTrick: 0,
             startedGame: true,
+            isOver: false,
+            ranking: [],
         });
 
         this.updateRoomsState({
             rooms: this.roomsState.rooms.map(r =>
                 r.roomId === roomId
-                    ? { ...r, isGameInProgress: true, players: playersStarted }
+                    ? { ...r, isGameInProgress: true, players: gamePlayers }
                     : r
             ),
         });
@@ -488,6 +494,25 @@ export class Game {
         const sorted = [...this.gameState.players].sort((a, b) => b.score - a.score);
         const ranking = sorted.map((player, index) => ({ ...player, position: index + 1 }));
         this.updateGameState({ ranking });
+    }
+
+    // ─── Nettoyage ────────────────────────────────────────────────────────────
+
+    /** Supprime les rooms non démarrées dont le socket était créateur ou membre. */
+    public cleanupRoomsForSocket(socketId: string): void {
+        this.updateRoomsState({
+            rooms: this.roomsState.rooms.filter(room => {
+                // Garde les rooms en cours de jeu
+                if (room.isGameInProgress) return true;
+                // Supprime les rooms en attente où ce socket était présent
+                const isInRoom = room.players.some(p => p.socketId === socketId);
+                return !isInRoom;
+            }),
+        });
+        // Retire aussi le joueur du gameState global
+        this.updateGameState({
+            players: this.gameState.players.filter(p => p.socketId !== socketId),
+        });
     }
 
     // ─── goBackGame ───────────────────────────────────────────────────────────

@@ -65,10 +65,6 @@ export class ServerSocket {
 
         callback(uid, users, this.game.gameState, this.game.roomsState);
 
-        // Envoie l'état courant directement au nouveau socket (utile si une partie est en cours)
-        socket.emit("gameState", this.game.gameState);
-        socket.emit("roomsState", this.game.roomsState);
-
         this.sendMessage(
             "user_connected",
             users.filter((id) => id !== socket.id),
@@ -111,13 +107,14 @@ export class ServerSocket {
 
     handleDisconnect(socket: Socket) {
         console.info(`User disconnected: ${socket.id}`);
-        /** Remove user from users */
         const uid = this.getUidFromSocketID(socket.id);
         if (uid) {
             delete this.users[uid];
         }
-        /** Send disconnected user to all connected users */
+        // Supprime les rooms non démarrées dont ce socket était créateur
+        this.game.cleanupRoomsForSocket(socket.id);
         this.io.emit("user_disconnected", uid);
+        this.updateGameStateAndRoomState();
     }
 
     handleMessage(socket: Socket, message: string) {
