@@ -1,4 +1,4 @@
-//import { useGameContext } from '../utils/gameUtils';
+import CardGame from './CardGame';
 
 type Card = {
   value: string;
@@ -12,21 +12,31 @@ interface HandProps {
 }
 
 const Hand = ({ cards, highlighted, onCardClick }: HandProps) => {
-  //console.log("cards", cards)
+  const row1 = cards.slice(0, 7);
+  const row2 = cards.slice(7);
 
   return (
-    <div className="hand">
-      {cards.map((card, index) => (
-        <div
-          key={index}
-          className={`hand-card ${highlighted && index === highlighted ? 'highlighted' : ''}`}
-          onClick={() => onCardClick(index)}
-
-        >
-          <span className={card.suit === '♥' || card.suit === '♦' ? 'suit card-red' : 'suit card-black'}>{card.suit}</span>
-          <span>{card.value}</span>
-        </div>
-      ))}
+    <div className="flex flex-col gap-1 w-full py-1">
+      <div className="flex justify-center gap-1">
+        {row1.map((card, index) => (
+          <CardGame
+            key={index}
+            card={card}
+            highlighted={highlighted === index}
+            onClick={() => onCardClick(index)}
+          />
+        ))}
+      </div>
+      <div className="flex justify-center gap-1">
+        {row2.map((card, index) => (
+          <CardGame
+            key={index + 7}
+            card={card}
+            highlighted={highlighted === index + 7}
+            onClick={() => onCardClick(index + 7)}
+          />
+        ))}
+      </div>
     </div>
   );
 };
