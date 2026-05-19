@@ -35,6 +35,8 @@ const ListOfGames = () => {
   const [pseudo, setPseudo] = useState('');
   const [deckSize, setDeckSize] = useState<32 | 52>(52);
   const [maxPlayers, setMaxPlayers] = useState<number>(4);
+  const [roomIdToJoin, setRoomIdToJoin] = useState('');
+  const [joinedRooms, setJoinedRooms] = useState<string[]>([]);
 
   const handleDeckSizeChange = (size: 32 | 52) => {
     setDeckSize(size);
@@ -42,8 +44,6 @@ const ListOfGames = () => {
       setMaxPlayers(4);
     }
   };
-  const [roomIdToJoin, setRoomIdToJoin] = useState('');
-  const [joinedRooms, setJoinedRooms] = useState<string[]>([]);
 
   const { SocketState } = useSocketContext();
   const { GameState } = useGameContext();
