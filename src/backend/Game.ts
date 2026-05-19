@@ -76,6 +76,7 @@ export class Game {
             isOver: false,
             ranking: [],
             currentContract: null,
+            deckSize: 52,
         };
     }
 
@@ -130,7 +131,7 @@ export class Game {
         return room;
     }
 
-    public createGame(uid: string, socketId: string, pseudo: string): void {
+    public createGame(uid: string, socketId: string, pseudo: string, deckSize: 32 | 52 = 52): void {
         const createdRoom = this.createRoom();
         const newCreator: Player = { ...this.createEmptyPlayer(), uid, name: pseudo, socketId };
 
@@ -139,6 +140,7 @@ export class Game {
         const room = this.findRoomById(createdRoom.roomId);
         if (!room) return;
         room.players.push(newCreator);
+        room.deckSize = deckSize;
     }
 
     public joinGame(uid: string, socketId: string, pseudo: string, roomId: string): void {
@@ -171,7 +173,7 @@ export class Game {
         const room = this.findRoomById(roomId);
         if (!room) throw new Error("Room not found");
 
-        this.deck = new Deck();
+        this.deck = new Deck(room.deckSize);
         this.deck.shuffle();
         this.deck.dealCardsToPlayers(room.players);
 
@@ -232,6 +234,17 @@ export class Game {
             successful: false,
         };
 
+        // Initialise l'état Réussite si nécessaire
+        const isReussite = chosenContract.name === 'Réussite';
+        const reussite = isReussite
+            ? {
+                announcedValue: null,
+                chains: { '♥': [], '♦': [], '♣': [], '♠': [] },
+                finishOrder: [],
+                passedThisRound: [],
+            }
+            : undefined;
+
         this.updateGameState({
             currentContract: newContract,
             currentTrick: 0,
@@ -240,6 +253,8 @@ export class Game {
                 folds: [],
                 ledSuit: null,
             },
+            reussite,
+            playableCardIndices: undefined,
         });
 
         this.updateRoomsState({
@@ -247,6 +262,143 @@ export class Game {
                 r.roomId === roomId ? { ...r, currentContract: newContract } : r
             ),
         });
+    }
+
+    // ─── Contrat Réussite ─────────────────────────────────────────────────────
+
+    /** Le dealer annonce la valeur de départ. Le tour passe immédiatement au joueur suivant. */
+    public announceReussite(value: string): void {
+        const reussite = this.gameState.reussite;
+        if (!reussite || reussite.announcedValue !== null) return;
+
+        this.updateGameState({
+            reussite: { ...reussite, announcedValue: value },
+        });
+        this.nextPlayer();
+        this.autoSkipIfNoMoves();
+        this.syncRoomsWithGameState();
+    }
+
+    /** Calcule les indices des cartes jouables dans la main du joueur courant (Réussite). */
+    private updatePlayableForReussite(): void {
+        const reussite = this.gameState.reussite;
+        if (!reussite || reussite.announcedValue === null) {
+            this.updateGameState({ playableCardIndices: undefined });
+            return;
+        }
+        const currentPlayer = this.gameState.currentPlayer;
+        const hand = currentPlayer.startedHand;
+        const indices: number[] = [];
+        hand.forEach((card, idx) => {
+            if (this.isLegalReussiteMove(card, reussite)) indices.push(idx);
+        });
+        this.updateGameState({ playableCardIndices: indices });
+    }
+
+    /** Vérifie qu'une carte est jouable selon les règles Réussite. */
+    private isLegalReussiteMove(card: ICard, reussite: NonNullable<GameState['reussite']>): boolean {
+        if (reussite.announcedValue === null) return false;
+        // Carte de la valeur annoncée — toujours jouable (ouvre une nouvelle chaîne)
+        if (card.value === reussite.announcedValue) return true;
+        // Sinon : doit toucher une chaîne existante de la même couleur (±1)
+        const chain = reussite.chains[card.suit];
+        if (!chain || chain.length === 0) return false;
+        const idx = CARD_ORDER.indexOf(card.value);
+        const chainIndices = chain.map(c => CARD_ORDER.indexOf(c.value));
+        const min = Math.min(...chainIndices);
+        const max = Math.max(...chainIndices);
+        return idx === min - 1 || idx === max + 1;
+    }
+
+    /** Pose une carte dans le contrat Réussite. */
+    private playReussiteCard(card: ICard, player: Player, playerIndex: number): void {
+        const reussite = this.gameState.reussite!;
+
+        if (!this.isLegalReussiteMove(card, reussite)) {
+            throw new CustomError(
+                `Coup illégal. Tu dois jouer un ${reussite.announcedValue} ou une carte adjacente à une chaîne existante.`,
+                400,
+            );
+        }
+
+        // Retire la carte de la main
+        const updatedPlayers = this.gameState.players.map((p, i) =>
+            i === playerIndex
+                ? { ...p, startedHand: p.startedHand.filter(c => c.value !== card.value || c.suit !== card.suit) }
+                : p,
+        );
+
+        // Ajoute à la chaîne de la couleur correspondante
+        const updatedChains = {
+            ...reussite.chains,
+            [card.suit]: [...reussite.chains[card.suit], card],
+        };
+
+        // Quelqu'un vient-il de finir sa main ?
+        const finishedPlayer = updatedPlayers[playerIndex];
+        const newFinishOrder = finishedPlayer.startedHand.length === 0 && !reussite.finishOrder.includes(player.uid)
+            ? [...reussite.finishOrder, player.uid]
+            : reussite.finishOrder;
+
+        this.updateGameState({
+            players: updatedPlayers,
+            reussite: {
+                ...reussite,
+                chains: updatedChains,
+                finishOrder: newFinishOrder,
+                passedThisRound: [], // Reset : un vrai coup débloque le tour de pass
+            },
+        });
+
+        // Fin de contrat anticipée si 2 joueurs ont vidé leur main
+        if (newFinishOrder.length >= 2) {
+            this.endHand();
+            return;
+        }
+
+        this.nextPlayer();
+        this.autoSkipIfNoMoves();
+    }
+
+    /** Auto-skip en chaîne : si le joueur courant ne peut rien jouer, le serveur passe son tour. */
+    private autoSkipIfNoMoves(): void {
+        const reussite = this.gameState.reussite;
+        if (!reussite || reussite.announcedValue === null) return;
+
+        // Limite à MAX_PLAYERS tours pour éviter une boucle infinie
+        for (let safety = 0; safety < MAX_PLAYERS; safety++) {
+            const currentPlayer = this.gameState.currentPlayer;
+            const playable = currentPlayer.startedHand.filter(c => this.isLegalReussiteMove(c, this.gameState.reussite!));
+
+            if (playable.length > 0) {
+                this.updatePlayableForReussite();
+                return;
+            }
+
+            // Aucun coup légal — on passe
+            const newPassed = reussite.passedThisRound.includes(currentPlayer.uid)
+                ? reussite.passedThisRound
+                : [...this.gameState.reussite!.passedThisRound, currentPlayer.uid];
+
+            this.updateGameState({
+                reussite: { ...this.gameState.reussite!, passedThisRound: newPassed },
+            });
+
+            this.serverSocket.io.emit('player_passed', { uid: currentPlayer.uid, name: currentPlayer.name });
+
+            // Vérifie le blocage total : si tous les joueurs n'ayant pas fini ont passé
+            const stillInRace = this.gameState.players.filter(
+                p => !this.gameState.reussite!.finishOrder.includes(p.uid) && p.startedHand.length > 0,
+            );
+            const allPassed = stillInRace.every(p => this.gameState.reussite!.passedThisRound.includes(p.uid));
+            if (allPassed) {
+                this.endHand();
+                return;
+            }
+
+            this.nextPlayer();
+        }
+        this.updatePlayableForReussite();
     }
 
     /** Enregistre le contrat choisi dans l'historique du joueur. */
@@ -268,8 +420,22 @@ export class Game {
     // ─── Rotation des joueurs ─────────────────────────────────────────────────
 
     public nextPlayer(): void {
-        const { currentPlayer, players } = this.gameState;
+        const { currentPlayer, players, reussite } = this.gameState;
         const currentIndex = players.findIndex(p => p.uid === currentPlayer.uid);
+
+        // Pour Réussite : on saute les joueurs ayant déjà vidé leur main
+        if (reussite) {
+            for (let step = 1; step <= MAX_PLAYERS; step++) {
+                const candidate = players[(currentIndex + step) % MAX_PLAYERS];
+                if (!reussite.finishOrder.includes(candidate.uid) && candidate.startedHand.length > 0) {
+                    this.updateGameState({ currentPlayer: candidate });
+                    return;
+                }
+            }
+            // Personne n'a de cartes — boucle infinie évitée
+            return;
+        }
+
         const nextIndex = (currentIndex + 1) % MAX_PLAYERS;
         this.updateGameState({ currentPlayer: players[nextIndex] });
     }
@@ -300,6 +466,13 @@ export class Game {
             const { players, currentTurn, currentContract } = this.gameState;
             const playerIndex = this.findPlayerIndexByName(playerCardClicked.name);
             if (playerIndex === -1) return;
+
+            // Branche Réussite : logique de pose différente
+            if (currentContract?.contract.name === 'Réussite' && this.gameState.reussite) {
+                this.playReussiteCard(cardClicked, playerCardClicked, playerIndex);
+                this.syncRoomsWithGameState();
+                return;
+            }
 
             this.validateCardPlay(cardClicked, playerCardClicked, currentTurn);
 
@@ -428,12 +601,12 @@ export class Game {
     // ─── Fin de manche ────────────────────────────────────────────────────────
 
     public endHand(): void {
-        const { players, currentContract } = this.gameState;
+        const { players, currentContract, reussite } = this.gameState;
 
         // Calcul des scores de fin de manche (sauf Le barbu, scoré par pli)
         let updatedPlayers = [...players];
         if (currentContract) {
-            updatedPlayers = Contracts.calculateHandScore(players, currentContract);
+            updatedPlayers = Contracts.calculateHandScore(players, currentContract, reussite);
         }
 
         this.updateGameState({ players: updatedPlayers });
@@ -473,13 +646,19 @@ export class Game {
                 folds: [],
                 ledSuit: null,
             },
+            reussite: undefined,
+            playableCardIndices: undefined,
         });
 
         // Avance le dealer
         this.nextDealer();
 
+        // Récupère la taille du jeu depuis la première room en cours
+        const activeRoom = this.roomsState.rooms.find(r => r.isGameInProgress);
+        const deckSize = activeRoom?.deckSize ?? 52;
+
         // Distribue de nouvelles cartes
-        this.deck = new Deck();
+        this.deck = new Deck(deckSize);
         this.deck.shuffle();
         this.deck.dealCardsToPlayers(this.gameState.players);
         // Force la mise à jour de l'état avec les nouvelles mains (mutation directe par dealCardsToPlayers)

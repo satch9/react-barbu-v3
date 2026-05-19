@@ -3,6 +3,7 @@ import { useGameContext } from '../utils/gameUtils';
 import BoardHeader from './BoardHeader';
 import PlayedCards from './PlayedCards';
 import ReussiteArea from './ReussiteArea';
+import ReussiteAnnouncePicker from './ReussiteAnnouncePicker';
 import Hand from './Hand';
 import ContractList from './ContractList';
 import { Contract, Player, Room } from '../backend/gameInterface';
@@ -28,9 +29,17 @@ const Board = () => {
       ? GameState.gameState.currentPlayer
       : undefined;
 
-  const roomId: string | undefined = GameState.roomsState.rooms.find((room: Room) =>
-    room.players.find((player: Player) => player.uid === SocketState.uid)
-  )?.roomId;
+  const room = GameState.roomsState.rooms.find((r: Room) =>
+    r.players.find((player: Player) => player.uid === SocketState.uid),
+  );
+  const roomId = room?.roomId;
+  const deckSize: 32 | 52 = room?.deckSize ?? 52;
+
+  const currentContract = GameState.gameState.currentContract;
+  const isReussite = currentContract?.contract.name === 'Réussite';
+  const reussite = GameState.gameState.reussite;
+  const needsAnnounce = isReussite && reussite && reussite.announcedValue === null;
+  const isDealer = isTheCurrentPlayer && currentContract?.player.uid === SocketState.uid;
 
   const showRanking =
     GameState.gameState.ranking.length > 0 &&
@@ -38,7 +47,7 @@ const Board = () => {
 
   const availableContracts = GameState.gameState.contracts.filter(
     contract =>
-      !isTheCurrentPlayer?.chosenContracts.some(cc => cc.contract.name === contract.name)
+      !isTheCurrentPlayer?.chosenContracts.some(cc => cc.contract.name === contract.name),
   );
 
   const handleCardClick = (cardIndex: number) => {
@@ -72,6 +81,10 @@ const Board = () => {
     }
   };
 
+  const handleAnnounce = (value: string) => {
+    SocketState.socket?.emit('announce_reussite', { value });
+  };
+
   useEffect(() => {
     const socket = SocketState.socket;
     if (!socket) return;
@@ -91,11 +104,32 @@ const Board = () => {
       setHighLightedCard(undefined);
     };
 
+    const handlePlayerPassed = ({ name }: { uid: string; name: string }) => {
+      toast(`${name} a passé son tour`, {
+        icon: '⏭️',
+        style: { background: '#1f2937', color: '#fafaf5' },
+        duration: 2500,
+        position: 'top-center',
+      });
+    };
+
     socket.on('error', handleError);
-    return () => { socket.off('error', handleError); };
+    socket.on('player_passed', handlePlayerPassed);
+    return () => {
+      socket.off('error', handleError);
+      socket.off('player_passed', handlePlayerPassed);
+    };
   }, [SocketState.socket]);
 
   const isGameOver = GameState.gameState.isOver;
+
+  // Cartes jouables pour le joueur courant (Réussite uniquement, fourni par le serveur).
+  // Pendant la phase d'annonce, aucune carte n'est jouable.
+  const playableIndices = needsAnnounce
+    ? []
+    : isReussite && isTheCurrentPlayer
+      ? GameState.gameState.playableCardIndices
+      : undefined;
 
   return (
     <div className="min-h-[100dvh] bg-felt flex flex-col">
@@ -107,13 +141,13 @@ const Board = () => {
         <>
           <BoardHeader />
 
-          <PlayedCards
-            folds={GameState.gameState.currentTurn.folds}
-            players={GameState.gameState.players}
-          />
-
-          {GameState.gameState.currentContract?.contract.name === 'Réussite' && (
-            <ReussiteArea />
+          {isReussite && reussite ? (
+            <ReussiteArea chains={reussite.chains} deckSize={deckSize} />
+          ) : (
+            <PlayedCards
+              folds={GameState.gameState.currentTurn.folds}
+              players={GameState.gameState.players}
+            />
           )}
 
           {showRanking && <Ranking />}
@@ -135,10 +169,15 @@ const Board = () => {
                 cards={isTheGoodPlayer.startedHand}
                 highlighted={highLightedCard}
                 onCardClick={isTheCurrentPlayer ? handleCardClick : () => {}}
+                playableIndices={playableIndices}
               />
             )}
 
-            {isTheCurrentPlayer && !GameState.gameState.currentContract && (
+            {needsAnnounce && isDealer && (
+              <ReussiteAnnouncePicker deckSize={deckSize} onAnnounce={handleAnnounce} />
+            )}
+
+            {isTheCurrentPlayer && !currentContract && (
               <div className="min-h-[144px]">
                 <ContractList
                   contracts={availableContracts}

@@ -33,6 +33,7 @@ const ListOfGames = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [pseudo, setPseudo] = useState('');
+  const [deckSize, setDeckSize] = useState<32 | 52>(52);
   const [roomIdToJoin, setRoomIdToJoin] = useState('');
   const [joinedRooms, setJoinedRooms] = useState<string[]>([]);
 
@@ -46,6 +47,7 @@ const ListOfGames = () => {
         uid: SocketState.uid,
         socketId: SocketState.socket.id,
         pseudo: pseudo.trim(),
+        deckSize,
       });
     }
     setPseudo('');
@@ -161,7 +163,7 @@ const ListOfGames = () => {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="bg-felt border-card/20 max-w-xs">
           <DialogHeader>
-            <DialogTitle className="text-card">Choisir un pseudo</DialogTitle>
+            <DialogTitle className="text-card">Nouvelle partie</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateSubmit}>
             <Input
@@ -172,6 +174,35 @@ const ListOfGames = () => {
               required
               autoFocus
             />
+            <div className="mb-4">
+              <p className="text-card/80 text-xs mb-2">Taille du jeu</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={`text-card border-card/30 text-sm ${
+                    deckSize === 52
+                      ? 'bg-yellow-600/80 hover:bg-yellow-600/80 border-transparent'
+                      : 'bg-felt-dark/40 hover:bg-felt-dark/60'
+                  }`}
+                  onClick={() => setDeckSize(52)}
+                >
+                  52 cartes
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={`text-card border-card/30 text-sm ${
+                    deckSize === 32
+                      ? 'bg-yellow-600/80 hover:bg-yellow-600/80 border-transparent'
+                      : 'bg-felt-dark/40 hover:bg-felt-dark/60'
+                  }`}
+                  onClick={() => setDeckSize(32)}
+                >
+                  32 cartes
+                </Button>
+              </div>
+            </div>
             <DialogFooter>
               <Button
                 type="submit"

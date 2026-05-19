@@ -4,9 +4,10 @@ import { customCompare } from "./utils";
 
 export class Deck {
     cards: Card[] | undefined;
+    private deckSize: 32 | 52;
 
-
-    constructor(cardsClass?: Card[]) {
+    constructor(deckSize: 32 | 52 = 52, cardsClass?: Card[]) {
+        this.deckSize = deckSize;
         if (cardsClass === undefined) {
             this.cards = this.freshDeck();
         } else {
@@ -18,9 +19,17 @@ export class Deck {
         return this.cards?.length;
     }
 
+    /** Valeurs incluses selon la taille du jeu : 32 cartes = 7-A, 52 cartes = 2-A */
+    private allowedValues(): string[] {
+        return this.deckSize === 32
+            ? ['7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+            : Card.VALUES;
+    }
+
     freshDeck() {
+        const values = this.allowedValues();
         return Card.SUITS.flatMap(suit => {
-            return Card.VALUES.map(value => {
+            return values.map(value => {
                 return new Card(suit, value);
             });
         });

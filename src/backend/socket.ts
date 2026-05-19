@@ -48,6 +48,7 @@ export class ServerSocket {
         socket.on("start_game", this.handleStartGame.bind(this));
         socket.on("choose_contract", this.handleChooseContract.bind(this));
         socket.on("card_played", this.handleCardPlayed.bind(this));
+        socket.on("announce_reussite", this.handleAnnounceReussite.bind(this));
         socket.on("gobackgame", this.handleGoBackGame.bind(this));
 
         /** END GAME SECTION */
@@ -94,8 +95,8 @@ export class ServerSocket {
         );
     }
 
-    handleCreateGame({ uid, socketId, pseudo }: { uid: string, socketId: string, pseudo: string }) {
-        this.game.createGame(uid, socketId, pseudo);
+    handleCreateGame({ uid, socketId, pseudo, deckSize }: { uid: string, socketId: string, pseudo: string, deckSize?: 32 | 52 }) {
+        this.game.createGame(uid, socketId, pseudo, deckSize ?? 52);
         this.updateGameStateAndRoomState();
     }
 
@@ -113,12 +114,24 @@ export class ServerSocket {
     handleChooseContract({ playerContract, contractIndex, roomId }: { playerContract: Player, contractIndex: number, roomId: string }) {
         this.game.chooseContract(playerContract, contractIndex, roomId);
         this.game.updateChosenContracts(playerContract, contractIndex);
-        this.game.nextPlayer();
+
+        // Pour la Réussite, le dealer reste actif jusqu'à ce qu'il annonce la valeur.
+        // Pour les autres contrats, on passe au joueur suivant immédiatement.
+        const isReussite = this.game.gameState.currentContract?.contract.name === 'Réussite';
+        if (!isReussite) {
+            this.game.nextPlayer();
+        }
+
         this.updateGameStateAndRoomState();
     }
 
     handleCardPlayed({ cardClicked, playerCardClicked }: { cardClicked: Card, playerCardClicked: Player }) {
         this.game.cardPlayed(cardClicked, playerCardClicked)
+        this.updateGameStateAndRoomState();
+    }
+
+    handleAnnounceReussite({ value }: { value: string }) {
+        this.game.announceReussite(value);
         this.updateGameStateAndRoomState();
     }
 

@@ -1,4 +1,4 @@
-import { Player, ChosenContract } from "./gameInterface";
+import { Player, ChosenContract, ReussiteState } from "./gameInterface";
 
 export class Contracts {
     static CONTRACTS = [
@@ -14,7 +14,7 @@ export class Contracts {
      * Calcule les scores en fin de manche pour tous les joueurs.
      * "Le barbu" est scoré en cours de jeu (par pli), pas ici.
      */
-    static calculateHandScore(players: Player[], currentContract: ChosenContract): Player[] {
+    static calculateHandScore(players: Player[], currentContract: ChosenContract, reussite?: ReussiteState): Player[] {
         const contractName = currentContract.contract.name;
         const contractValue = currentContract.contract.value;
 
@@ -61,14 +61,12 @@ export class Contracts {
             }
 
             case 'Réussite': {
-                // Le joueur ayant gagné le plus de plis gagne +100, le deuxième +50
+                // Le 1er joueur à vider sa main gagne +100, le 2e +50
                 const values = contractValue as number[];
-                const sorted = [...players].sort(
-                    (a, b) => b.myFoldsDuringTurn.length - a.myFoldsDuringTurn.length
-                );
+                const finishOrder = reussite?.finishOrder ?? [];
                 return players.map(player => {
-                    if (player.uid === sorted[0].uid) return { ...player, score: player.score + values[0] };
-                    if (player.uid === sorted[1].uid) return { ...player, score: player.score + values[1] };
+                    if (player.uid === finishOrder[0]) return { ...player, score: player.score + values[0] };
+                    if (player.uid === finishOrder[1]) return { ...player, score: player.score + values[1] };
                     return player;
                 });
             }

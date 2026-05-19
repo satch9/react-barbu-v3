@@ -37,6 +37,14 @@ export interface ChosenContract {
 
 } */
 
+/** État spécifique au contrat Réussite — null/undefined pour les autres contrats */
+export interface ReussiteState {
+    announcedValue: string | null;                  // Valeur annoncée par le dealer ('7', '8', 'J'...) — null avant annonce
+    chains: { [suit: string]: ICard[] };            // Chaînes de cartes posées par couleur (♥/♦/♣/♠), dans l'ordre chronologique
+    finishOrder: string[];                          // uid des joueurs ayant vidé leur main, dans l'ordre
+    passedThisRound: string[];                      // uids ayant passé sur leur dernier tour (reset à chaque coup réel)
+}
+
 /** Interface de GameState pour le jeu du barbu */
 export interface GameState {
     players: Player[];
@@ -49,6 +57,8 @@ export interface GameState {
     currentRound: number; // Manche en cours (0-indexed)
     currentTrick: number; // Pli en cours dans la manche (0-12)
     isOver: boolean; // La partie est terminée
+    reussite?: ReussiteState; // État du contrat Réussite (présent uniquement pendant ce contrat)
+    playableCardIndices?: number[]; // Indices des cartes jouables pour le joueur courant (Réussite uniquement)
 }
 
 /** Interface de player pour le jeu du barbu */
@@ -90,4 +100,5 @@ export interface Room {
     isOver: boolean; // La partie est terminée
     ranking: Player[]; // Classement des joueurs
     currentContract: ChosenContract | null; // Contrat en cours
+    deckSize: 32 | 52; // Taille du jeu (choisie à la création)
 }
