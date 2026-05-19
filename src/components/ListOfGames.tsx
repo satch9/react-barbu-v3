@@ -29,7 +29,11 @@ const playersBadgeVariant = (count: number, max: number): string => {
   return 'bg-red-600 hover:bg-red-600 text-white';
 };
 
-const ListOfGames = () => {
+interface ListOfGamesProps {
+  onShowRules: () => void;
+}
+
+const ListOfGames = ({ onShowRules }: ListOfGamesProps) => {
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [pseudo, setPseudo] = useState('');
@@ -93,7 +97,17 @@ const ListOfGames = () => {
 
   return (
     <div className="min-h-[100dvh] bg-felt-dark flex flex-col items-center justify-center p-4 gap-6">
-      <h1 className="text-card text-4xl font-serif">🃏 BARBU</h1>
+      <div className="flex items-center gap-4">
+        <h1 className="text-card text-4xl font-serif">🃏 BARBU</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-card/70 border-card/30 hover:bg-card/10 text-xs"
+          onClick={onShowRules}
+        >
+          Règles
+        </Button>
+      </div>
 
       <Button
         className="bg-yellow-600 hover:bg-yellow-500 text-white font-semibold"

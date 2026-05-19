@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { useSocketContext } from './utils/socketUtils';
 import { useGameContext } from './utils/gameUtils';
 import ListOfGames from './components/ListOfGames';
 import Board from './components/Board';
+import RulesPage from './components/RulesPage';
 import { useSocketSetup } from './hooks/useSocket';
 
 const App = () => {
   const { SocketState } = useSocketContext();
   const { GameState } = useGameContext();
+  const [showRules, setShowRules] = useState(false);
 
   useSocketSetup();
 
@@ -18,11 +21,9 @@ const App = () => {
     );
   }
 
-  return (
-    <div className="min-h-[100dvh]">
-      {GameState.gameState.startedGame ? <Board /> : <ListOfGames />}
-    </div>
-  );
+  if (GameState.gameState.startedGame) return <Board />;
+  if (showRules) return <RulesPage onBack={() => setShowRules(false)} />;
+  return <ListOfGames onShowRules={() => setShowRules(true)} />;
 };
 
 export default App;
