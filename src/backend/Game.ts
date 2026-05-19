@@ -173,7 +173,7 @@ export class Game {
         const room = this.findRoomById(roomId);
         if (!room) throw new Error("Room not found");
 
-        this.deck = new Deck(room.deckSize);
+        this.deck = new Deck(room.deckSize, room.players.length);
         this.deck.shuffle();
         this.deck.dealCardsToPlayers(room.players);
 
@@ -677,7 +677,7 @@ export class Game {
         const deckSize = activeRoom?.deckSize ?? 52;
 
         // Distribue de nouvelles cartes
-        this.deck = new Deck(deckSize);
+        this.deck = new Deck(deckSize, this.gameState.players.length);
         this.deck.shuffle();
         this.deck.dealCardsToPlayers(this.gameState.players);
         // Force la mise à jour de l'état avec les nouvelles mains (mutation directe par dealCardsToPlayers)

@@ -1,13 +1,15 @@
 import { Card } from "./Card";
 import { Player } from "./gameInterface";
-import { customCompare } from "./utils";
+import { customCompare, lcm } from "./utils";
 
 export class Deck {
     cards: Card[] | undefined;
     private deckSize: 32 | 52;
+    private numPlayers: number;
 
-    constructor(deckSize: 32 | 52 = 52, cardsClass?: Card[]) {
+    constructor(deckSize: 32 | 52 = 52, numPlayers: number = 4, cardsClass?: Card[]) {
         this.deckSize = deckSize;
+        this.numPlayers = numPlayers;
         if (cardsClass === undefined) {
             this.cards = this.freshDeck();
         } else {
@@ -19,11 +21,17 @@ export class Deck {
         return this.cards?.length;
     }
 
-    /** Valeurs incluses selon la taille du jeu : 32 cartes = 7-A, 52 cartes = 2-A */
+    /** Valeurs incluses selon la taille du jeu et le nombre de joueurs.
+     *  Retire les plus petites séries (lcm(N,4)) pour que chaque joueur ait le même nombre de cartes. */
     private allowedValues(): string[] {
-        return this.deckSize === 32
+        const allValues = this.deckSize === 32
             ? ['7', '8', '9', '10', 'J', 'Q', 'K', 'A']
             : Card.VALUES;
+        const totalCards = allValues.length * 4;
+        const l = lcm(this.numPlayers, 4);
+        const targetCards = Math.floor(totalCards / l) * l;
+        const seriesToRemove = (totalCards - targetCards) / 4;
+        return allValues.slice(seriesToRemove);
     }
 
     freshDeck() {

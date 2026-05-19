@@ -1,5 +1,13 @@
 import { Card } from "./Card";
 
+export function gcd(a: number, b: number): number {
+    return b === 0 ? a : gcd(b, a % b);
+}
+
+export function lcm(a: number, b: number): number {
+    return (a * b) / gcd(a, b);
+}
+
 export function customCompare(card1: Card, card2: Card): number {
     const cardOrder = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
