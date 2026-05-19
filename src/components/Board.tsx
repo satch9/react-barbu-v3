@@ -16,6 +16,7 @@ const Board = () => {
   const { SocketState } = useSocketContext();
   const { GameState } = useGameContext();
   const [highLightedCard, setHighLightedCard] = useState<number | undefined>(undefined);
+  const [isSubmittingContract, setIsSubmittingContract] = useState(false);
 
   const cardClickCount = useRef(0);
   const selectedCardIndex = useRef<number | undefined>(undefined);
@@ -72,8 +73,9 @@ const Board = () => {
   };
 
   const handleContractClick = (contract: Contract) => {
-    if (isTheCurrentPlayer) {
+    if (isTheCurrentPlayer && !isSubmittingContract) {
       const contractIndex = GameState.gameState.contracts.indexOf(contract);
+      setIsSubmittingContract(true);
       SocketState.socket?.emit('choose_contract', {
         playerContract: isTheCurrentPlayer,
         contractIndex,
@@ -90,6 +92,7 @@ const Board = () => {
   const currentPlayerUid = GameState.gameState.currentPlayer.uid;
   const currentPlayerName = GameState.gameState.currentPlayer.name;
   useEffect(() => {
+    setIsSubmittingContract(false);
     if (!currentPlayerUid || currentPlayerUid === prevCurrentPlayerUid.current) return;
     prevCurrentPlayerUid.current = currentPlayerUid;
     if (!currentPlayerName) return;
@@ -123,6 +126,7 @@ const Board = () => {
         duration: 5000,
         position: 'top-center',
       });
+      setIsSubmittingContract(false);
       cardClickCount.current = 0;
       selectedCardIndex.current = undefined;
       setHighLightedCard(undefined);
@@ -216,7 +220,7 @@ const Board = () => {
               <ReussiteAnnouncePicker deckSize={deckSize} onAnnounce={handleAnnounce} />
             )}
 
-            {isTheCurrentPlayer && !currentContract && (
+            {isTheCurrentPlayer && !currentContract && !isSubmittingContract && (
               <div className="min-h-[144px]">
                 <ContractList
                   contracts={availableContracts}
