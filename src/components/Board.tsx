@@ -114,7 +114,7 @@ const Board = () => {
                     {GameState.gameState.currentContract?.contract.name && <BoardHeader />}
 
                     {numberOfFolds > 0 && (
-                        <PlayedCards cards={GameState.gameState.currentTurn.folds} />
+                        <PlayedCards folds={GameState.gameState.currentTurn.folds} players={GameState.gameState.players} />
                     )}
 
                     {GameState.gameState.currentContract?.contract.name === "Réussite" && (
