@@ -11,12 +11,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Card } from '../backend/Card';
 import toast, { Toaster } from 'react-hot-toast';
 import Ranking from './Ranking';
+import { getLiveHandScore, formatLiveScore, liveScoreColor } from '../utils/liveScore';
 
 const Board = () => {
   const { SocketState } = useSocketContext();
   const { GameState } = useGameContext();
   const [highLightedCard, setHighLightedCard] = useState<number | undefined>(undefined);
   const [isSubmittingContract, setIsSubmittingContract] = useState(false);
+  const [showScoreSheet, setShowScoreSheet] = useState(false);
 
   const cardClickCount = useRef(0);
   const selectedCardIndex = useRef<number | undefined>(undefined);
@@ -43,9 +45,22 @@ const Board = () => {
   const needsAnnounce = isReussite && reussite && reussite.announcedValue === null;
   const isDealer = isTheCurrentPlayer && currentContract?.player.uid === SocketState.uid;
 
-  const showRanking =
-    GameState.gameState.ranking.length > 0 &&
-    GameState.gameState.ranking.some(p => p.score !== 0);
+  const players = GameState.gameState.players;
+  const numPlayers = players.length;
+
+  // Score live de la manche en cours pour chaque joueur
+  const liveScores: (number | null)[] = players.map(p =>
+    getLiveHandScore(p, currentContract, numPlayers)
+  );
+  const liveScoreMap: Record<string, number | null> = Object.fromEntries(
+    players.map((p, i) => [p.uid, liveScores[i]])
+  );
+
+  // Score live du joueur courant (pour affichage en bas)
+  const myLiveScore = isTheGoodPlayer
+    ? getLiveHandScore(isTheGoodPlayer, currentContract, numPlayers)
+    : null;
+  const myLiveScoreStr = formatLiveScore(myLiveScore);
 
   const availableContracts = GameState.gameState.contracts.filter(
     contract =>
@@ -182,27 +197,34 @@ const Board = () => {
 
       {!isGameOver && (
         <>
-          <BoardHeader />
+          <BoardHeader onScoreClick={() => setShowScoreSheet(true)} />
+
+          {showScoreSheet && (
+            <Ranking onClose={() => setShowScoreSheet(false)} liveScores={liveScoreMap} />
+          )}
 
           {isReussite && reussite ? (
             <ReussiteArea chains={reussite.chains} deckSize={deckSize} />
           ) : (
             <PlayedCards
               folds={GameState.gameState.currentTurn.folds}
-              players={GameState.gameState.players}
+              players={players}
             />
           )}
-
-          {showRanking && <Ranking />}
 
           <div className="flex-1" />
 
           <div className="flex flex-col">
             {isTheGoodPlayer && (
-              <p className="h-8 flex items-center justify-center text-card text-sm font-semibold">
+              <p className="h-8 flex items-center justify-center text-card text-sm font-semibold gap-2">
                 {isTheGoodPlayer.name}
+                {myLiveScoreStr !== null && (
+                  <span className={`font-mono text-xs font-semibold ${liveScoreColor(myLiveScore)}`}>
+                    {myLiveScoreStr}
+                  </span>
+                )}
                 {isTheCurrentPlayer && (
-                  <span className="ml-2 text-yellow-400 text-xs">● À vous</span>
+                  <span className="text-yellow-400 text-xs">● À vous</span>
                 )}
               </p>
             )}

@@ -292,6 +292,12 @@ export class Game {
         hand.forEach((card, idx) => {
             if (this.isLegalReussiteMove(card, reussite)) indices.push(idx);
         });
+        console.log('[Réussite] updatePlayable →', {
+            player: currentPlayer.name,
+            hand: hand.map(c => `${c.value}${c.suit}`),
+            chains: Object.fromEntries(Object.entries(reussite.chains).map(([s, cs]) => [s, cs.map(c => `${c.value}${c.suit}`)])),
+            indices,
+        });
         this.updateGameState({ playableCardIndices: indices });
     }
 
