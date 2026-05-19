@@ -550,10 +550,14 @@ export class Game {
                 const newTrickCount = this.gameState.currentTrick + 1;
                 const winner = playersAfterTrick[winnerIndex];
                 const allHandsEmpty = playersAfterTrick.every(p => p.startedHand.length === 0);
-                // Le contrat Barbu se termine dès que K♥ est pris (plus aucun risque)
+                // Terminaisons anticipées : plus aucun risque pour le contrat en cours
                 const barbuOver = isBarbu && barbuTaken;
+                const isPasDeDames = currentContract?.contract.name === 'Pas de dames';
+                const isPasDeCoeurs = currentContract?.contract.name === 'Pas de coeurs';
+                const noMoreQueens = isPasDeDames && playersAfterTrick.every(p => !p.startedHand.some(c => c.value === 'Q'));
+                const noMoreHearts = isPasDeCoeurs && playersAfterTrick.every(p => !p.startedHand.some(c => c.suit === '♥'));
 
-                if (allHandsEmpty || barbuOver) {
+                if (allHandsEmpty || barbuOver || noMoreQueens || noMoreHearts) {
                     // Dernière levée — fin de manche
                     this.updateGameState({
                         players: playersAfterTrick,
