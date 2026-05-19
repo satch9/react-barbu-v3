@@ -113,11 +113,26 @@ const Board = () => {
       });
     };
 
+    const handlePlayerBonus = () => {
+      toast('As posé — rejoue !', {
+        icon: '🂡',
+        style: {
+          background: '#1f2937',
+          color: '#fafaf5',
+          border: '1px solid #facc15',
+        },
+        duration: 2500,
+        position: 'top-center',
+      });
+    };
+
     socket.on('error', handleError);
     socket.on('player_passed', handlePlayerPassed);
+    socket.on('player_bonus', handlePlayerBonus);
     return () => {
       socket.off('error', handleError);
       socket.off('player_passed', handlePlayerPassed);
+      socket.off('player_bonus', handlePlayerBonus);
     };
   }, [SocketState.socket]);
 

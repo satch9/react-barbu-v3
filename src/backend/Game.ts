@@ -368,6 +368,10 @@ export class Game {
         if (playedAce && hasMoreLegalMoves) {
             // Le joueur rejoue — on ne passe PAS au suivant
             this.updatePlayableForReussite();
+            const socketId = this.serverSocket.users[player.uid];
+            if (socketId) {
+                this.serverSocket.io.to(socketId).emit('player_bonus', { reason: 'ace' });
+            }
             return;
         }
 
