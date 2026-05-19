@@ -515,6 +515,25 @@ export class Game {
         });
     }
 
+    // ─── Reconnexion ──────────────────────────────────────────────────────────
+
+    /** Met à jour le socketId d'un joueur identifié par son uid (post-reconnexion). */
+    public updatePlayerSocketId(uid: string, newSocketId: string): void {
+        this.updateRoomsState({
+            rooms: this.roomsState.rooms.map(room => ({
+                ...room,
+                players: room.players.map(p =>
+                    p.uid === uid ? { ...p, socketId: newSocketId } : p
+                ),
+            })),
+        });
+        this.updateGameState({
+            players: this.gameState.players.map(p =>
+                p.uid === uid ? { ...p, socketId: newSocketId } : p
+            ),
+        });
+    }
+
     // ─── goBackGame ───────────────────────────────────────────────────────────
 
     public goBackGame(roomIdGoBackGame: string): void {

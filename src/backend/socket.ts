@@ -52,15 +52,30 @@ export class ServerSocket {
 
         /** END GAME SECTION */
 
-        socket.on("disconnect", this.handleDisconnect.bind(this, socket));
+        socket.on("disconnect", (reason: string) => {
+            console.info(`[disconnect-reason] ${socket.id} reason=${reason}`);
+            this.handleDisconnect(socket);
+        });
         socket.on("message", this.handleMessage.bind(this, socket));
     }
 
-    handleHandshake(socket: Socket, callback: (uid: string, users: string[], gameState: GameState, roomsState: RoomsState) => void) {
-        console.log(`Handshake received from ${socket.id}`);
+    handleHandshake(socket: Socket, existingUid: string | null, callback: (uid: string, users: string[], gameState: GameState, roomsState: RoomsState) => void) {
+        console.log(`Handshake received from ${socket.id} (existingUid=${existingUid ?? 'none'})`);
 
-        const uid = uuidv4();
+        // Réutilise le uid envoyé par le client s'il a un format valide,
+        // sinon en génère un nouveau. Cela permet à un joueur qui se reconnecte
+        // (iOS qui suspend l'onglet, blip réseau…) de garder son identité.
+        const isValidUid = typeof existingUid === 'string' && /^[0-9a-f-]{36}$/i.test(existingUid);
+        const uid = isValidUid ? existingUid : uuidv4();
+
         this.users[uid] = socket.id;
+
+        // Si ce joueur figure déjà dans une room ou dans gameState, on rafraîchit
+        // son socketId courant (utile pour les emits ciblés post-reconnexion).
+        if (isValidUid) {
+            this.game.updatePlayerSocketId(uid, socket.id);
+        }
+
         const users = Object.values(this.users);
 
         callback(uid, users, this.game.gameState, this.game.roomsState);

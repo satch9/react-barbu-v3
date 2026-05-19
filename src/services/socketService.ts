@@ -45,6 +45,7 @@ class SocketService {
     onRoomsState: (roomsState: RoomsState) => void;
     onStartedGame: () => void;
     onError: (error: string) => void;
+    onConnect?: () => void;
   }) {
     if (!this.socket) return;
 
@@ -54,6 +55,10 @@ class SocketService {
     this.socket.on("roomsState", callbacks.onRoomsState);
     this.socket.on("started_game", callbacks.onStartedGame);
     this.socket.on("error", callbacks.onError);
+    if (callbacks.onConnect) {
+      // Fires on initial connect AND on every reconnect — used to re-handshake.
+      this.socket.on("connect", callbacks.onConnect);
+    }
 
     // Reconnection events
     this.socket.io.on("reconnect", (attempt) => {
@@ -81,9 +86,9 @@ class SocketService {
     this.socket.io.removeAllListeners();
   }
 
-  sendHandshake(callback: (uid: string, players: string[], gameState: import('../backend/gameInterface').GameState, roomsState: import('../backend/gameInterface').RoomsState) => void) {
+  sendHandshake(existingUid: string | null, callback: (uid: string, players: string[], gameState: import('../backend/gameInterface').GameState, roomsState: import('../backend/gameInterface').RoomsState) => void) {
     if (!this.socket) return;
-    this.socket.emit("handshake", callback);
+    this.socket.emit("handshake", existingUid, callback);
   }
 
   getSocket() {
