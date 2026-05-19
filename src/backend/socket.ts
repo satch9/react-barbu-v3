@@ -71,14 +71,21 @@ export class ServerSocket {
         this.users[uid] = socket.id;
 
         // Si ce joueur figure déjà dans une room ou dans gameState, on rafraîchit
-        // son socketId courant (utile pour les emits ciblés post-reconnexion).
+        // son socketId courant et on broadcaste le nouvel état à tous les clients.
         if (isValidUid) {
             this.game.updatePlayerSocketId(uid, socket.id);
         }
 
         const users = Object.values(this.users);
 
+        // Envoie l'état complet au client qui (re)connecte.
         callback(uid, users, this.game.gameState, this.game.roomsState);
+
+        // Broadcaste le gameState/roomsState rafraîchi à tous les autres
+        // pour qu'ils voient le socketId à jour du joueur reconnecté.
+        if (isValidUid) {
+            this.updateGameStateAndRoomState();
+        }
 
         this.sendMessage(
             "user_connected",
