@@ -82,7 +82,6 @@ export interface Contract {
     name: string; // Nom du contrat
     description: string; // Description du contrat
     value: number | number[]; // Valeur du contrat
-    maxNumberOfTurns: number; // Nombre maximum de tours
 }
 
 /** Interface de RoomsState */

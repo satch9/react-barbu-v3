@@ -2,12 +2,12 @@ import { Player, ChosenContract, ReussiteState } from "./gameInterface";
 
 export class Contracts {
     static CONTRACTS = [
-        { name: 'Le barbu', maxNumberOfTurns: 13, description: 'Le joueur qui prend le roi de cœur perd 70 points', value: -70 },
-        { name: 'Pas de coeurs', maxNumberOfTurns: 13, description: 'Le joueur qui possède des coeurs à la fin de la partie perd 5 points par coeur', value: -5 },
-        { name: 'Pas de plis', maxNumberOfTurns: 13, description: 'Le joueur qui possède des plis à la fin de la partie perd 5 points par plis', value: -5 },
-        { name: 'Pas de dames', maxNumberOfTurns: 13, description: 'Le joueur qui possède des dames à la fin de la partie perd 15 points par plis', value: -15 },
-        { name: 'Salade', maxNumberOfTurns: 13, description: 'On reprend les contrats le barbu, pas de coeurs, pas de plis, pas de dames ', value: [-70, -5, -5, -15] },
-        { name: 'Réussite', maxNumberOfTurns: 13, description: 'Le joueur qui gagne le plus de plis remporte 100 et le deuxième 50 points', value: [100, 50] }
+        { name: 'Le barbu', description: 'Le joueur qui prend le roi de cœur perd 70 points', value: -70 },
+        { name: 'Pas de coeurs', description: 'Le joueur qui possède des coeurs à la fin de la partie perd 5 points par coeur', value: -5 },
+        { name: 'Pas de plis', description: 'Le joueur qui possède des plis à la fin de la partie perd 5 points par plis', value: -5 },
+        { name: 'Pas de dames', description: 'Le joueur qui possède des dames à la fin de la partie perd 15 points par plis', value: -15 },
+        { name: 'Salade', description: 'On reprend les contrats le barbu, pas de coeurs, pas de plis, pas de dames ', value: [-70, -5, -5, -15] },
+        { name: 'Réussite', description: 'Le joueur qui gagne le plus de plis remporte 100 et le deuxième 50 points', value: [100, 50] }
     ];
 
     /**
