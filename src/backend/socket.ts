@@ -111,8 +111,11 @@ export class ServerSocket {
         if (uid) {
             delete this.users[uid];
         }
-        // Supprime les rooms non démarrées dont ce socket était créateur
-        this.game.cleanupRoomsForSocket(socket.id);
+        // Note: on ne supprime PAS les rooms automatiquement à la déconnexion.
+        // Socket.IO émet "disconnect" pour de nombreuses raisons hors-contrôle
+        // (upgrade de transport, blip réseau, navigation) — supprimer la room
+        // ferait disparaître la partie aux autres joueurs alors qu'elle est
+        // toujours valide. Cleanup explicite via un futur événement "leave_game".
         this.io.emit("user_disconnected", uid);
         this.updateGameStateAndRoomState();
     }
