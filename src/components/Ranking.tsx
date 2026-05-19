@@ -1,43 +1,61 @@
-import { useContext } from 'react'
-import { GameContext } from '../context/GameContext';
+import { useGameContext } from '../utils/gameUtils';
+import { useSocketContext } from '../utils/socketUtils';
+import { Button } from '@/components/ui/button';
 
-const Ranking = () => {
-    const { GameState } = useContext(GameContext);
-
-
-    const ranking = GameState.gameState.ranking;
-
-    console.log("ranking", ranking);
-    return (
-        <div className='ranking'>
-            <table className='ranking-table'>
-                <thead>
-                    <tr>
-                        <th>Position</th>
-                        <th>Nom</th>
-                        <th>Score</th>
-                        <th>Contrats Choisis</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {ranking.map((player, index) => (
-                        <tr key={player.uid}>
-                            <td>{index + 1}</td>
-                            <td>{player.name}</td>
-                            <td>{player.score}</td>
-                            <td>
-                                <ul>
-                                    {player.chosenContracts.map((contract, i) => (
-                                        <li key={i}>{contract.contract.name}</li>
-                                    ))}
-                                </ul>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    )
+interface RankingProps {
+  isGameOver?: boolean;
 }
 
-export default Ranking
+const Ranking = ({ isGameOver = false }: RankingProps) => {
+  const { GameState } = useGameContext();
+  const { SocketState } = useSocketContext();
+  const ranking = GameState.gameState.ranking;
+
+  const handleNewGame = () => {
+    const roomId = GameState.roomsState.rooms.find(room =>
+      room.players.some(p => p.uid === SocketState.uid)
+    )?.roomId;
+    if (roomId) SocketState.socket?.emit('gobackgame', { roomIdGoBackGame: roomId });
+  };
+
+  if (isGameOver) {
+    return (
+      <div className="fixed inset-0 bg-felt flex flex-col items-center justify-center gap-6 z-50">
+        <h2 className="text-card text-2xl font-bold">Partie terminée !</h2>
+        <div className="bg-felt-dark/70 rounded-xl p-4 w-full max-w-xs mx-4">
+          <p className="text-card font-semibold text-sm mb-3 text-center">Classement final</p>
+          <div className="flex flex-col gap-2">
+            {ranking.map((player, index) => (
+              <div key={player.uid} className="flex justify-between text-card text-sm">
+                <span>{index + 1}. {player.name}</span>
+                <span className="font-mono">{player.score} pts</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <Button
+          className="bg-yellow-600 hover:bg-yellow-500 text-white font-semibold"
+          onClick={handleNewGame}
+        >
+          Nouvelle partie
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-felt-dark/70 rounded-xl p-3 mx-2 my-1 shrink-0">
+      <p className="text-card font-semibold text-sm mb-2">Classement</p>
+      <div className="flex flex-col gap-1">
+        {ranking.map((player, index) => (
+          <div key={player.uid} className="flex justify-between text-card text-sm">
+            <span>{index + 1}. {player.name}</span>
+            <span className="font-mono">{player.score} pts</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default Ranking;
