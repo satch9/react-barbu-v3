@@ -101,4 +101,5 @@ export interface Room {
     ranking: Player[]; // Classement des joueurs
     currentContract: ChosenContract | null; // Contrat en cours
     deckSize: 32 | 52; // Taille du jeu (choisie à la création)
+    maxPlayers: number; // Nombre max de joueurs (choisi par le créateur)
 }

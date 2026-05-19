@@ -95,8 +95,8 @@ export class ServerSocket {
         );
     }
 
-    handleCreateGame({ uid, socketId, pseudo, deckSize }: { uid: string, socketId: string, pseudo: string, deckSize?: 32 | 52 }) {
-        this.game.createGame(uid, socketId, pseudo, deckSize ?? 52);
+    handleCreateGame({ uid, socketId, pseudo, deckSize, maxPlayers }: { uid: string, socketId: string, pseudo: string, deckSize?: 32 | 52, maxPlayers?: number }) {
+        this.game.createGame(uid, socketId, pseudo, deckSize ?? 52, maxPlayers ?? 4);
         this.updateGameStateAndRoomState();
     }
 

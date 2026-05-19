@@ -8,9 +8,7 @@ import { ChosenContract, Contract, GameState, ICard, Card, Player, Room, RoomsSt
 type PartialGameState = Partial<GameState>;
 type PartialRoomsState = Partial<RoomsState>;
 
-const MAX_PLAYERS = 4;
-// Chaque joueur est dealer une fois par contrat : 4 joueurs × 6 contrats = 24 manches
-const MAX_ROUNDS = MAX_PLAYERS * Contracts.CONTRACTS.length;
+const DEFAULT_MAX_PLAYERS = 4;
 
 const CARD_ORDER = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
@@ -77,6 +75,7 @@ export class Game {
             ranking: [],
             currentContract: null,
             deckSize: 52,
+            maxPlayers: DEFAULT_MAX_PLAYERS,
         };
     }
 
@@ -131,7 +130,7 @@ export class Game {
         return room;
     }
 
-    public createGame(uid: string, socketId: string, pseudo: string, deckSize: 32 | 52 = 52): void {
+    public createGame(uid: string, socketId: string, pseudo: string, deckSize: 32 | 52 = 52, maxPlayers: number = DEFAULT_MAX_PLAYERS): void {
         const createdRoom = this.createRoom();
         const newCreator: Player = { ...this.createEmptyPlayer(), uid, name: pseudo, socketId };
 
@@ -141,6 +140,7 @@ export class Game {
         if (!room) return;
         room.players.push(newCreator);
         room.deckSize = deckSize;
+        room.maxPlayers = maxPlayers;
     }
 
     public joinGame(uid: string, socketId: string, pseudo: string, roomId: string): void {
@@ -151,7 +151,7 @@ export class Game {
         }
 
         // Refuse si la room est déjà pleine
-        if (room.players.length >= MAX_PLAYERS) {
+        if (room.players.length >= room.maxPlayers) {
             const socket = this.serverSocket.io.sockets.sockets.get(socketId);
             if (socket) socket.emit("error", "Cette partie est déjà complète.");
             return;
@@ -189,9 +189,9 @@ export class Game {
             isPlaying: true,
         }));
 
-        const dealerIndex = Math.floor(Math.random() * MAX_PLAYERS);
+        const dealerIndex = Math.floor(Math.random() * gamePlayers.length);
         const dealer = gamePlayers[dealerIndex];
-        const startingPlayer = gamePlayers[(dealerIndex + 1) % MAX_PLAYERS];
+        const startingPlayer = gamePlayers[(dealerIndex + 1) % gamePlayers.length];
 
         this.updateGameState({
             players: gamePlayers,
@@ -384,8 +384,8 @@ export class Game {
         const reussite = this.gameState.reussite;
         if (!reussite || reussite.announcedValue === null) return;
 
-        // Limite à MAX_PLAYERS tours pour éviter une boucle infinie
-        for (let safety = 0; safety < MAX_PLAYERS; safety++) {
+        // Limite au nombre de joueurs pour éviter une boucle infinie
+        for (let safety = 0; safety < this.gameState.players.length; safety++) {
             const currentPlayer = this.gameState.currentPlayer;
             const playable = currentPlayer.startedHand.filter(c => this.isLegalReussiteMove(c, this.gameState.reussite!));
 
@@ -444,8 +444,8 @@ export class Game {
 
         // Pour Réussite : on saute les joueurs ayant déjà vidé leur main
         if (reussite) {
-            for (let step = 1; step <= MAX_PLAYERS; step++) {
-                const candidate = players[(currentIndex + step) % MAX_PLAYERS];
+            for (let step = 1; step <= players.length; step++) {
+                const candidate = players[(currentIndex + step) % players.length];
                 if (!reussite.finishOrder.includes(candidate.uid) && candidate.startedHand.length > 0) {
                     this.updateGameState({ currentPlayer: candidate });
                     return;
@@ -455,16 +455,16 @@ export class Game {
             return;
         }
 
-        const nextIndex = (currentIndex + 1) % MAX_PLAYERS;
+        const nextIndex = (currentIndex + 1) % players.length;
         this.updateGameState({ currentPlayer: players[nextIndex] });
     }
 
     public nextDealer(): void {
         const { currentTurn, players } = this.gameState;
         const currentDealerIndex = players.findIndex(p => p.uid === currentTurn.dealer.uid);
-        const nextDealerIndex = (currentDealerIndex + 1) % MAX_PLAYERS;
+        const nextDealerIndex = (currentDealerIndex + 1) % players.length;
         const nextDealer = players[nextDealerIndex];
-        const nextStarting = players[(nextDealerIndex + 1) % MAX_PLAYERS];
+        const nextStarting = players[(nextDealerIndex + 1) % players.length];
 
         this.updateGameState({
             currentPlayer: nextDealer,
@@ -503,14 +503,14 @@ export class Game {
             );
 
             // Ajoute la carte dans le pli en cours
-            const updatedFolds: (ICard | null)[] = Array.from({ length: MAX_PLAYERS }, (_, i) => currentTurn.folds[i] ?? null);
+            const updatedFolds: (ICard | null)[] = Array.from({ length: players.length }, (_, i) => currentTurn.folds[i] ?? null);
             updatedFolds[playerIndex] = cardClicked;
 
             // La première carte posée fixe la couleur demandée
             const ledSuit = currentTurn.ledSuit ?? cardClicked.suit;
             const cardsInTrick = updatedFolds.filter(Boolean).length;
 
-            if (cardsInTrick < MAX_PLAYERS) {
+            if (cardsInTrick < players.length) {
                 // Pli incomplet — on attend les autres joueurs
                 this.updateGameState({
                     players: updatedPlayers,
@@ -633,7 +633,7 @@ export class Game {
 
         const newRound = this.gameState.currentRound + 1;
 
-        if (newRound >= MAX_ROUNDS) {
+        if (newRound >= this.gameState.players.length * Contracts.CONTRACTS.length) {
             // Fin de partie
             this.updateGameState({
                 currentRound: newRound,

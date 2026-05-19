@@ -22,10 +22,10 @@ import {
 } from '@/components/ui/table';
 import { Room } from '../backend/gameInterface';
 
-const playersBadgeVariant = (count: number): string => {
-  if (count === 4) return 'bg-green-600 hover:bg-green-600 text-white';
-  if (count === 3) return 'bg-yellow-600 hover:bg-yellow-600 text-white';
-  if (count === 2) return 'bg-orange-500 hover:bg-orange-500 text-white';
+const playersBadgeVariant = (count: number, max: number): string => {
+  if (count === max) return 'bg-green-600 hover:bg-green-600 text-white';
+  if (count >= max - 1) return 'bg-yellow-600 hover:bg-yellow-600 text-white';
+  if (count >= 2) return 'bg-orange-500 hover:bg-orange-500 text-white';
   return 'bg-red-600 hover:bg-red-600 text-white';
 };
 
@@ -34,6 +34,7 @@ const ListOfGames = () => {
   const [joinOpen, setJoinOpen] = useState(false);
   const [pseudo, setPseudo] = useState('');
   const [deckSize, setDeckSize] = useState<32 | 52>(52);
+  const [maxPlayers, setMaxPlayers] = useState<number>(4);
   const [roomIdToJoin, setRoomIdToJoin] = useState('');
   const [joinedRooms, setJoinedRooms] = useState<string[]>([]);
 
@@ -48,6 +49,7 @@ const ListOfGames = () => {
         socketId: SocketState.socket.id,
         pseudo: pseudo.trim(),
         deckSize,
+        maxPlayers,
       });
     }
     setPseudo('');
@@ -110,8 +112,8 @@ const ListOfGames = () => {
               <TableRow key={room.roomId} className="border-card/10 hover:bg-card/5">
                 <TableCell className="text-card font-mono text-sm">{room.name}</TableCell>
                 <TableCell>
-                  <Badge className={playersBadgeVariant(room.players.length)}>
-                    {room.players.length}/4
+                  <Badge className={playersBadgeVariant(room.players.length, room.maxPlayers)}>
+                    {room.players.length}/{room.maxPlayers}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -128,7 +130,7 @@ const ListOfGames = () => {
                     >
                       Revenir
                     </Button>
-                  ) : isCreator(room) && room.players.length === 4 ? (
+                  ) : isCreator(room) && room.players.length === room.maxPlayers ? (
                     <Button
                       size="sm"
                       className="bg-green-600 hover:bg-green-500 text-white text-xs"
@@ -142,7 +144,7 @@ const ListOfGames = () => {
                     <Badge variant="secondary" className="text-xs bg-card/20 text-card/70">
                       en attente…
                     </Badge>
-                  ) : room.players.length < 4 ? (
+                  ) : room.players.length < room.maxPlayers ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -174,6 +176,26 @@ const ListOfGames = () => {
               required
               autoFocus
             />
+            <div className="mb-4">
+              <p className="text-card/80 text-xs mb-2">Nombre de joueurs</p>
+              <div className="grid grid-cols-3 gap-2">
+                {[2, 3, 4].map(n => (
+                  <Button
+                    key={n}
+                    type="button"
+                    variant="outline"
+                    className={`text-card border-card/30 text-sm ${
+                      maxPlayers === n
+                        ? 'bg-yellow-600/80 hover:bg-yellow-600/80 border-transparent'
+                        : 'bg-felt-dark/40 hover:bg-felt-dark/60'
+                    }`}
+                    onClick={() => setMaxPlayers(n)}
+                  >
+                    {n}
+                  </Button>
+                ))}
+              </div>
+            </div>
             <div className="mb-4">
               <p className="text-card/80 text-xs mb-2">Taille du jeu</p>
               <div className="grid grid-cols-2 gap-2">
