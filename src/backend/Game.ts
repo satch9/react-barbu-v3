@@ -352,8 +352,9 @@ export class Game {
             reussite: updatedReussite,
         });
 
-        // Fin de contrat anticipée si 2 joueurs ont vidé leur main
-        if (newFinishOrder.length >= 2) {
+        // Fin de contrat anticipée : à 2 joueurs 1 finish suffit, à 3+ joueurs 2 finishes
+        const finishesNeeded = Math.min(2, this.gameState.players.length - 1);
+        if (newFinishOrder.length >= finishesNeeded) {
             this.endHand();
             return;
         }
