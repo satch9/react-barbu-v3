@@ -17,6 +17,7 @@ export class Contracts {
     static calculateHandScore(players: Player[], currentContract: ChosenContract, reussite?: ReussiteState): Player[] {
         const contractName = currentContract.contract.name;
         const contractValue = currentContract.contract.value;
+        const numPlayers = players.length;
 
         switch (contractName) {
             case 'Le barbu':
@@ -32,7 +33,7 @@ export class Contracts {
             case 'Pas de plis':
                 return players.map(player => ({
                     ...player,
-                    score: player.score + (contractValue as number) * Math.floor(player.myFoldsDuringTurn.length / 4)
+                    score: player.score + (contractValue as number) * Math.floor(player.myFoldsDuringTurn.length / numPlayers)
                 }));
 
             case 'Pas de dames':
@@ -48,7 +49,7 @@ export class Contracts {
                     const kh = player.myFoldsDuringTurn.filter(c => c.suit === '♥' && c.value === 'K').length;
                     const hearts = player.myFoldsDuringTurn.filter(c => c.suit === '♥').length;
                     const queens = player.myFoldsDuringTurn.filter(c => c.value === 'Q').length;
-                    const tricks = Math.floor(player.myFoldsDuringTurn.length / 4);
+                    const tricks = Math.floor(player.myFoldsDuringTurn.length / numPlayers);
                     return {
                         ...player,
                         score: player.score

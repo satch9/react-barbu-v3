@@ -533,9 +533,11 @@ export class Game {
                 // Le barbu et la Salade : score immédiat si ♥K est dans le pli
                 const isBarbu = currentContract?.contract.name === 'Le barbu';
                 const isSalade = currentContract?.contract.name === 'Salade';
+                let barbuTaken = false;
                 if (isBarbu || isSalade) {
                     const hasKingOfHearts = trickCards.some(c => c.suit === '♥' && c.value === 'K');
                     if (hasKingOfHearts) {
+                        barbuTaken = true;
                         const barbuPenalty = isBarbu
                             ? (currentContract!.contract.value as number)
                             : (currentContract!.contract.value as number[])[0];
@@ -547,8 +549,11 @@ export class Game {
 
                 const newTrickCount = this.gameState.currentTrick + 1;
                 const winner = playersAfterTrick[winnerIndex];
+                const allHandsEmpty = playersAfterTrick.every(p => p.startedHand.length === 0);
+                // Le contrat Barbu se termine dès que K♥ est pris (plus aucun risque)
+                const barbuOver = isBarbu && barbuTaken;
 
-                if (newTrickCount >= 13) {
+                if (allHandsEmpty || barbuOver) {
                     // Dernière levée — fin de manche
                     this.updateGameState({
                         players: playersAfterTrick,
