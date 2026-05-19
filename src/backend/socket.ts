@@ -114,13 +114,13 @@ export class ServerSocket {
     handleChooseContract({ playerContract, contractIndex, roomId }: { playerContract: Player, contractIndex: number, roomId: string }) {
         // Rejeter si une manche est déjà en cours
         if (this.game.gameState.currentContract !== null) {
-            this.io.to(playerContract.socketId).emit('error', 'Un contrat est déjà en cours.');
+            this.io.to(this.users[playerContract.uid]).emit('error', 'Un contrat est déjà en cours.');
             return;
         }
 
         // Rejeter si ce n'est pas le tour de ce joueur
         if (playerContract.uid !== this.game.gameState.currentPlayer.uid) {
-            this.io.to(playerContract.socketId).emit('error', "Ce n'est pas votre tour.");
+            this.io.to(this.users[playerContract.uid]).emit('error', "Ce n'est pas votre tour.");
             return;
         }
 
