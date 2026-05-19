@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSocketContext } from './utils/socketUtils';
 import { useGameContext } from './utils/gameUtils';
 import ListOfGames from './components/ListOfGames';
@@ -10,6 +10,10 @@ const App = () => {
   const { SocketState } = useSocketContext();
   const { GameState } = useGameContext();
   const [showRules, setShowRules] = useState(false);
+
+  useEffect(() => {
+    if (!GameState.gameState.startedGame) setShowRules(false);
+  }, [GameState.gameState.startedGame]);
 
   useSocketSetup();
 
