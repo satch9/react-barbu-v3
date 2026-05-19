@@ -19,6 +19,7 @@ const Board = () => {
 
   const cardClickCount = useRef(0);
   const selectedCardIndex = useRef<number | undefined>(undefined);
+  const prevCurrentPlayerUid = useRef<string>('');
 
   // Identité par uid (stable après reconnexion)
   const isTheGoodPlayer: Player | undefined = GameState.gameState.players.find(
@@ -84,6 +85,29 @@ const Board = () => {
   const handleAnnounce = (value: string) => {
     SocketState.socket?.emit('announce_reussite', { value });
   };
+
+  // Toast "À qui est le tour" quand le joueur courant change
+  const currentPlayerUid = GameState.gameState.currentPlayer.uid;
+  const currentPlayerName = GameState.gameState.currentPlayer.name;
+  useEffect(() => {
+    if (!currentPlayerUid || currentPlayerUid === prevCurrentPlayerUid.current) return;
+    prevCurrentPlayerUid.current = currentPlayerUid;
+    if (!currentPlayerName) return;
+
+    if (currentPlayerUid === SocketState.uid) {
+      toast('🎴 À vous de jouer !', {
+        style: { background: '#1a6b3c', color: '#fafaf5', border: '1px solid #facc15' },
+        duration: 2000,
+        position: 'top-center',
+      });
+    } else {
+      toast(`Tour de ${currentPlayerName}`, {
+        style: { background: '#1f2937', color: '#fafaf5' },
+        duration: 2000,
+        position: 'top-center',
+      });
+    }
+  }, [currentPlayerUid, currentPlayerName, SocketState.uid]);
 
   useEffect(() => {
     const socket = SocketState.socket;
