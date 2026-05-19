@@ -340,19 +340,34 @@ export class Game {
             ? [...reussite.finishOrder, player.uid]
             : reussite.finishOrder;
 
+        const updatedReussite = {
+            ...reussite,
+            chains: updatedChains,
+            finishOrder: newFinishOrder,
+            passedThisRound: [], // Reset : un vrai coup débloque le tour de pass
+        };
+
         this.updateGameState({
             players: updatedPlayers,
-            reussite: {
-                ...reussite,
-                chains: updatedChains,
-                finishOrder: newFinishOrder,
-                passedThisRound: [], // Reset : un vrai coup débloque le tour de pass
-            },
+            reussite: updatedReussite,
         });
 
         // Fin de contrat anticipée si 2 joueurs ont vidé leur main
         if (newFinishOrder.length >= 2) {
             this.endHand();
+            return;
+        }
+
+        // Bonus As : si la carte posée est un As ET le joueur a encore au moins un coup
+        // légal, il garde son tour pour rejouer. Sinon flux normal.
+        const playedAce = card.value === 'A';
+        const stillHasCards = finishedPlayer.startedHand.length > 0;
+        const hasMoreLegalMoves = stillHasCards
+            && finishedPlayer.startedHand.some(c => this.isLegalReussiteMove(c, updatedReussite));
+
+        if (playedAce && hasMoreLegalMoves) {
+            // Le joueur rejoue — on ne passe PAS au suivant
+            this.updatePlayableForReussite();
             return;
         }
 
