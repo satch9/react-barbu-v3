@@ -51,9 +51,9 @@ const RulesPage = ({ onBack }: RulesPageProps) => (
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-card/20">
-              <th className="text-left py-2 pr-4 text-card/60 font-medium">Contrat</th>
-              <th className="text-left py-2 pr-4 text-card/60 font-medium">Objectif</th>
-              <th className="text-left py-2 text-card/60 font-medium">Points</th>
+              <th scope="col" className="text-left py-2 pr-4 text-card/60 font-medium">Contrat</th>
+              <th scope="col" className="text-left py-2 pr-4 text-card/60 font-medium">Objectif</th>
+              <th scope="col" className="text-left py-2 text-card/60 font-medium">Points</th>
             </tr>
           </thead>
           <tbody>
@@ -80,9 +80,9 @@ const RulesPage = ({ onBack }: RulesPageProps) => (
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-card/20">
-              <th className="text-left py-2 pr-4 text-card/60 font-medium">Joueurs</th>
-              <th className="text-left py-2 pr-4 text-card/60 font-medium">Séries à retirer</th>
-              <th className="text-left py-2 text-card/60 font-medium">Cartes / joueur</th>
+              <th scope="col" className="text-left py-2 pr-4 text-card/60 font-medium">Joueurs</th>
+              <th scope="col" className="text-left py-2 pr-4 text-card/60 font-medium">Séries à retirer</th>
+              <th scope="col" className="text-left py-2 text-card/60 font-medium">Cartes / joueur</th>
             </tr>
           </thead>
           <tbody>
@@ -109,9 +109,9 @@ const RulesPage = ({ onBack }: RulesPageProps) => (
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-card/20">
-              <th className="text-left py-2 pr-4 text-card/60 font-medium">Joueurs</th>
-              <th className="text-left py-2 pr-4 text-card/60 font-medium">Séries à retirer</th>
-              <th className="text-left py-2 text-card/60 font-medium">Cartes / joueur</th>
+              <th scope="col" className="text-left py-2 pr-4 text-card/60 font-medium">Joueurs</th>
+              <th scope="col" className="text-left py-2 pr-4 text-card/60 font-medium">Séries à retirer</th>
+              <th scope="col" className="text-left py-2 text-card/60 font-medium">Cartes / joueur</th>
             </tr>
           </thead>
           <tbody>
