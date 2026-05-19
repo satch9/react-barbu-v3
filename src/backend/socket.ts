@@ -112,12 +112,24 @@ export class ServerSocket {
     }
 
     handleChooseContract({ playerContract, contractIndex, roomId }: { playerContract: Player, contractIndex: number, roomId: string }) {
+        // Rejeter si une manche est déjà en cours
+        if (this.game.gameState.currentContract !== null) {
+            this.io.to(playerContract.socketId).emit('error', 'Un contrat est déjà en cours.');
+            return;
+        }
+
+        // Rejeter si ce n'est pas le tour de ce joueur
+        if (playerContract.uid !== this.game.gameState.currentPlayer.uid) {
+            this.io.to(playerContract.socketId).emit('error', "Ce n'est pas votre tour.");
+            return;
+        }
+
         this.game.chooseContract(playerContract, contractIndex, roomId);
         this.game.updateChosenContracts(playerContract, contractIndex);
 
         // Pour la Réussite, le dealer reste actif jusqu'à ce qu'il annonce la valeur.
         // Pour les autres contrats, on passe au joueur suivant immédiatement.
-        const isReussite = this.game.gameState.currentContract?.contract.name === 'Réussite';
+        const isReussite = this.game.gameState.currentContract!.contract.name === 'Réussite';
         if (!isReussite) {
             this.game.nextPlayer();
         }
