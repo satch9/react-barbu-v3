@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Spade } from 'lucide-react';
 import { useSocketContext } from '../utils/socketUtils';
 import { useGameContext } from '../utils/gameUtils';
 import { Button } from '@/components/ui/button';
@@ -98,7 +99,7 @@ const ListOfGames = ({ onShowRules }: ListOfGamesProps) => {
   return (
     <div className="min-h-[100dvh] bg-felt-dark flex flex-col items-center justify-center p-4 gap-6">
       <div className="flex items-center gap-4">
-        <h1 className="text-card text-4xl font-serif">🃏 BARBU</h1>
+        <h1 className="text-card text-4xl font-serif flex items-center gap-2"><Spade className="w-9 h-9" /> BARBU</h1>
         <Button
           variant="outline"
           size="sm"
