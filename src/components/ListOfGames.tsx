@@ -35,6 +35,13 @@ const ListOfGames = () => {
   const [pseudo, setPseudo] = useState('');
   const [deckSize, setDeckSize] = useState<32 | 52>(52);
   const [maxPlayers, setMaxPlayers] = useState<number>(4);
+
+  const handleDeckSizeChange = (size: 32 | 52) => {
+    setDeckSize(size);
+    if (size === 32 && maxPlayers > 4) {
+      setMaxPlayers(4);
+    }
+  };
   const [roomIdToJoin, setRoomIdToJoin] = useState('');
   const [joinedRooms, setJoinedRooms] = useState<string[]>([]);
 
@@ -177,26 +184,6 @@ const ListOfGames = () => {
               autoFocus
             />
             <div className="mb-4">
-              <p className="text-card/80 text-xs mb-2">Nombre de joueurs</p>
-              <div className="grid grid-cols-3 gap-2">
-                {[2, 3, 4].map(n => (
-                  <Button
-                    key={n}
-                    type="button"
-                    variant="outline"
-                    className={`text-card border-card/30 text-sm ${
-                      maxPlayers === n
-                        ? 'bg-yellow-600/80 hover:bg-yellow-600/80 border-transparent'
-                        : 'bg-felt-dark/40 hover:bg-felt-dark/60'
-                    }`}
-                    onClick={() => setMaxPlayers(n)}
-                  >
-                    {n}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div className="mb-4">
               <p className="text-card/80 text-xs mb-2">Taille du jeu</p>
               <div className="grid grid-cols-2 gap-2">
                 <Button
@@ -207,7 +194,7 @@ const ListOfGames = () => {
                       ? 'bg-yellow-600/80 hover:bg-yellow-600/80 border-transparent'
                       : 'bg-felt-dark/40 hover:bg-felt-dark/60'
                   }`}
-                  onClick={() => setDeckSize(52)}
+                  onClick={() => handleDeckSizeChange(52)}
                 >
                   52 cartes
                 </Button>
@@ -219,10 +206,30 @@ const ListOfGames = () => {
                       ? 'bg-yellow-600/80 hover:bg-yellow-600/80 border-transparent'
                       : 'bg-felt-dark/40 hover:bg-felt-dark/60'
                   }`}
-                  onClick={() => setDeckSize(32)}
+                  onClick={() => handleDeckSizeChange(32)}
                 >
                   32 cartes
                 </Button>
+              </div>
+            </div>
+            <div className="mb-4">
+              <p className="text-card/80 text-xs mb-2">Nombre de joueurs</p>
+              <div className="flex gap-2 flex-wrap">
+                {(deckSize === 32 ? [2, 3, 4] : [2, 3, 4, 5, 6, 7, 8]).map(n => (
+                  <Button
+                    key={n}
+                    type="button"
+                    variant="outline"
+                    className={`text-card border-card/30 text-sm w-10 ${
+                      maxPlayers === n
+                        ? 'bg-yellow-600/80 hover:bg-yellow-600/80 border-transparent'
+                        : 'bg-felt-dark/40 hover:bg-felt-dark/60'
+                    }`}
+                    onClick={() => setMaxPlayers(n)}
+                  >
+                    {n}
+                  </Button>
+                ))}
               </div>
             </div>
             <DialogFooter>
