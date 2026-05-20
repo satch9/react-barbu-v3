@@ -6,7 +6,8 @@ import ReussiteArea from './ReussiteArea';
 import ReussiteAnnouncePicker from './ReussiteAnnouncePicker';
 import Hand from './Hand';
 import ContractList from './ContractList';
-import { Contract, Player, Room } from '../backend/gameInterface';
+import { Contract, Player, Room, HandResult } from '../backend/gameInterface';
+import HandResultOverlay from './HandResultOverlay';
 import { useEffect, useRef, useState } from 'react';
 import { Card } from '../backend/Card';
 import toast, { Toaster } from 'react-hot-toast';
@@ -19,6 +20,7 @@ const Board = () => {
   const [highLightedCard, setHighLightedCard] = useState<number | undefined>(undefined);
   const [isSubmittingContract, setIsSubmittingContract] = useState(false);
   const [showScoreSheet, setShowScoreSheet] = useState(false);
+  const [handResult, setHandResult] = useState<HandResult | null>(null);
 
   const cardClickCount = useRef(0);
   const selectedCardIndex = useRef<number | undefined>(undefined);
@@ -169,13 +171,19 @@ const Board = () => {
       });
     };
 
+    const handleHandResult = (result: HandResult) => {
+      setHandResult(result);
+    };
+
     socket.on('error', handleError);
     socket.on('player_passed', handlePlayerPassed);
     socket.on('player_bonus', handlePlayerBonus);
+    socket.on('hand_result', handleHandResult);
     return () => {
       socket.off('error', handleError);
       socket.off('player_passed', handlePlayerPassed);
       socket.off('player_bonus', handlePlayerBonus);
+      socket.off('hand_result', handleHandResult);
     };
   }, [SocketState.socket]);
 
@@ -192,6 +200,13 @@ const Board = () => {
   return (
     <div className="min-h-[100dvh] bg-felt flex flex-col">
       <Toaster />
+
+      {handResult && (
+        <HandResultOverlay
+          result={handResult}
+          onDone={() => setHandResult(null)}
+        />
+      )}
 
       {isGameOver && <Ranking isGameOver />}
 
