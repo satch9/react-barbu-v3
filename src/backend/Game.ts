@@ -639,6 +639,9 @@ export class Game {
     public endHand(): void {
         const { players, currentContract, reussite } = this.gameState;
 
+        // Snapshot des scores avant calcul pour pouvoir calculer les deltas
+        const scoresBefore = players.map(p => ({ uid: p.uid, name: p.name, score: p.score }));
+
         // Calcul des scores de fin de manche (sauf Le barbu, scoré par pli)
         let updatedPlayers = [...players];
         if (currentContract) {
@@ -648,9 +651,31 @@ export class Game {
         this.updateGameState({ players: updatedPlayers });
         this.calculateRanking();
 
+        // Calcul des deltas et émission hand_result (sauf fin de partie)
         const newRound = this.gameState.currentRound + 1;
+        const isGameOver = newRound >= this.gameState.players.length * Contracts.CONTRACTS.length;
 
-        if (newRound >= this.gameState.players.length * Contracts.CONTRACTS.length) {
+        if (!isGameOver && currentContract) {
+            const scores = updatedPlayers.map(p => {
+                const before = scoresBefore.find(s => s.uid === p.uid);
+                return { name: p.name, scoreDelta: p.score - (before?.score ?? p.score) };
+            });
+
+            const sorted = [...scores].sort((a, b) => b.scoreDelta - a.scoreDelta);
+            const winner = sorted[0].scoreDelta !== 0 ? sorted[0] : null;
+            const loser = sorted.length > 1 && sorted[sorted.length - 1].scoreDelta !== sorted[0].scoreDelta
+                ? sorted[sorted.length - 1]
+                : null;
+
+            this.serverSocket.io.emit('hand_result', {
+                contractName: currentContract.contract.name,
+                winner,
+                loser,
+                scores,
+            });
+        }
+
+        if (isGameOver) {
             // Fin de partie
             this.updateGameState({
                 currentRound: newRound,
@@ -697,7 +722,6 @@ export class Game {
         this.deck = new Deck(deckSize, this.gameState.players.length);
         this.deck.shuffle();
         this.deck.dealCardsToPlayers(this.gameState.players);
-        // Force la mise à jour de l'état avec les nouvelles mains (mutation directe par dealCardsToPlayers)
         this.updateGameState({ players: [...this.gameState.players] });
 
         this.syncRoomsWithGameState();
