@@ -105,6 +105,8 @@ const Board = () => {
     SocketState.socket?.emit('announce_reussite', { value });
   };
 
+  const isGameOver = GameState.gameState.isOver;
+
   // Toast "À qui est le tour" quand le joueur courant change
   const currentPlayerUid = GameState.gameState.currentPlayer.uid;
   const currentPlayerName = GameState.gameState.currentPlayer.name;
@@ -128,6 +130,10 @@ const Board = () => {
       });
     }
   }, [currentPlayerUid, currentPlayerName, SocketState.uid]);
+
+  useEffect(() => {
+    if (isGameOver) setHandResult(null);
+  }, [isGameOver]);
 
   useEffect(() => {
     const socket = SocketState.socket;
@@ -186,8 +192,6 @@ const Board = () => {
       socket.off('hand_result', handleHandResult);
     };
   }, [SocketState.socket]);
-
-  const isGameOver = GameState.gameState.isOver;
 
   // Cartes jouables pour le joueur courant (Réussite uniquement, fourni par le serveur).
   // Pendant la phase d'annonce, aucune carte n'est jouable.

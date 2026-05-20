@@ -662,8 +662,9 @@ export class Game {
             });
 
             const sorted = [...scores].sort((a, b) => b.scoreDelta - a.scoreDelta);
-            const winner = sorted[0].scoreDelta !== 0 ? sorted[0] : null;
-            const loser = sorted.length > 1 && sorted[sorted.length - 1].scoreDelta !== sorted[0].scoreDelta
+            const allSame = sorted.every(s => s.scoreDelta === sorted[0].scoreDelta);
+            const winner = !allSame ? sorted[0] : null;
+            const loser = !allSame && sorted[sorted.length - 1].scoreDelta !== sorted[0].scoreDelta
                 ? sorted[sorted.length - 1]
                 : null;
 
