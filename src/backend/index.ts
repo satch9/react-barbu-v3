@@ -31,7 +31,7 @@ app.get("/ping", (_req, res) => {
 });
 
 /** Error handling */
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => { // eslint-disable-line @typescript-eslint/no-unused-vars
   console.error(err);
   res.status(500).json({ error: "Erreur interne du serveur" });
 });
