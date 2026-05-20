@@ -355,6 +355,7 @@ export class Game {
 
         this.updateGameState({
             players: updatedPlayers,
+            currentPlayer: updatedPlayers[playerIndex],
             reussite: updatedReussite,
         });
 
