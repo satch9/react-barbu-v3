@@ -17,6 +17,8 @@ const formatDelta = (delta: number) => {
 
 const HandResultOverlay = ({ result, onDone }: HandResultOverlayProps) => {
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const onDoneRef = useRef(onDone);
+    useEffect(() => { onDoneRef.current = onDone; });
 
     useEffect(() => {
         // Burst de confettis au montage
@@ -28,13 +30,14 @@ const HandResultOverlay = ({ result, onDone }: HandResultOverlayProps) => {
         });
 
         timerRef.current = setTimeout(() => {
-            onDone();
+            onDoneRef.current();
         }, DURATION_MS);
 
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
+            confetti.reset();
         };
-    }, [onDone]);
+    }, []); // mount only
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75">
@@ -73,8 +76,8 @@ const HandResultOverlay = ({ result, onDone }: HandResultOverlayProps) => {
 
                 {/* Tous les scores */}
                 <div className="w-full border-t border-white/10 pt-3 flex flex-col gap-1">
-                    {result.scores.map(s => (
-                        <div key={s.name} className="flex justify-between text-sm">
+                    {result.scores.map((s, i) => (
+                        <div key={`${s.name}-${i}`} className="flex justify-between text-sm">
                             <span className="text-card/70">{s.name}</span>
                             <span className={`font-mono font-semibold ${s.scoreDelta > 0 ? 'text-green-400' : s.scoreDelta < 0 ? 'text-red-400' : 'text-card/40'}`}>
                                 {formatDelta(s.scoreDelta)}
