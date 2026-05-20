@@ -144,8 +144,37 @@ export class ServerSocket {
     }
 
     handleCardPlayed({ cardClicked, playerCardClicked }: { cardClicked: Card, playerCardClicked: Player }) {
-        this.game.cardPlayed(cardClicked, playerCardClicked)
-        this.updateGameStateAndRoomState();
+        const numPlayers = this.game.gameState.players.length;
+        const prevFolds = this.game.gameState.currentTurn.folds.slice();
+        const prevCount = prevFolds.filter(Boolean).length;
+        const prevSnapshot = JSON.parse(JSON.stringify(this.game.gameState));
+
+        this.game.cardPlayed(cardClicked, playerCardClicked);
+
+        const newFolds = this.game.gameState.currentTurn.folds;
+        const newCount = newFolds.filter(Boolean).length;
+        const trickJustCompleted = prevCount === numPlayers - 1 && newCount === 0;
+
+        if (trickJustCompleted) {
+            // Reconstitue le pli complet avec la dernière carte posée
+            const playerIndex = prevSnapshot.players.findIndex((p: Player) => p.name === playerCardClicked.name);
+            const fullFolds = prevFolds.slice();
+            if (playerIndex !== -1) fullFolds[playerIndex] = cardClicked;
+
+            // Émet l'état intermédiaire avec les 4 cartes visibles
+            this.io.emit('gameState', {
+                ...prevSnapshot,
+                currentTurn: { ...prevSnapshot.currentTurn, folds: fullFolds },
+            });
+            this.io.emit('roomsState', this.game.roomsState);
+
+            // Après un délai, émet l'état final (pli effacé, joueur suivant actif)
+            setTimeout(() => {
+                this.updateGameStateAndRoomState();
+            }, 1500);
+        } else {
+            this.updateGameStateAndRoomState();
+        }
     }
 
     handleAnnounceReussite({ value }: { value: string }) {
