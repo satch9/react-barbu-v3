@@ -102,3 +102,11 @@ export interface Room {
     deckSize: 32 | 52; // Taille du jeu (choisie à la création)
     maxPlayers: number; // Nombre max de joueurs (choisi par le créateur)
 }
+
+/** Résultat d'une manche, émis par le serveur via l'événement 'hand_result'. */
+export interface HandResult {
+    contractName: string;
+    winner: { name: string; scoreDelta: number } | null;
+    loser:  { name: string; scoreDelta: number } | null;
+    scores: { name: string; scoreDelta: number }[];
+}
