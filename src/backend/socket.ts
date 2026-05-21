@@ -144,6 +144,7 @@ export class ServerSocket {
     }
 
     handleCardPlayed({ cardClicked, playerCardClicked }: { cardClicked: Card, playerCardClicked: Player }) {
+        const CARD_VIEW_DELAY = 2000;
         const numPlayers = this.game.gameState.players.length;
         const prevFolds = this.game.gameState.currentTurn.folds.slice();
         const prevCount = prevFolds.filter(Boolean).length;
@@ -154,6 +155,7 @@ export class ServerSocket {
         const newFolds = this.game.gameState.currentTurn.folds;
         const newCount = newFolds.filter(Boolean).length;
         const trickJustCompleted = prevCount === numPlayers - 1 && newCount === 0;
+        const cardPlayedIntermediate = !trickJustCompleted && newCount > prevCount;
 
         if (trickJustCompleted) {
             // Reconstitue le pli complet avec la dernière carte posée
@@ -161,17 +163,33 @@ export class ServerSocket {
             const fullFolds = prevFolds.slice();
             if (playerIndex !== -1) fullFolds[playerIndex] = cardClicked;
 
-            // Émet l'état intermédiaire avec les 4 cartes visibles
+            // Émet l'état intermédiaire avec toutes les cartes visibles (ancien currentPlayer)
             this.io.emit('gameState', {
                 ...prevSnapshot,
                 currentTurn: { ...prevSnapshot.currentTurn, folds: fullFolds },
             });
             this.io.emit('roomsState', this.game.roomsState);
 
-            // Après un délai, émet l'état final (pli effacé, joueur suivant actif)
+            // Après le délai, émet l'état final (pli effacé, joueur suivant actif)
             setTimeout(() => {
                 this.updateGameStateAndRoomState();
-            }, 1500);
+            }, CARD_VIEW_DELAY);
+        } else if (cardPlayedIntermediate) {
+            // Pli incomplet : on diffère le passage au joueur suivant pour laisser
+            // le temps de voir la carte qui vient d'être posée.
+            // On émet d'abord les cartes mises à jour mais en gardant l'ancien
+            // currentPlayer (donc personne ne sait encore que c'est à son tour).
+            this.io.emit('gameState', {
+                ...this.game.gameState,
+                currentPlayer: prevSnapshot.currentPlayer,
+                playableCardIndices: prevSnapshot.playableCardIndices,
+            });
+            this.io.emit('roomsState', this.game.roomsState);
+
+            // Après le délai, on bascule sur le vrai joueur suivant
+            setTimeout(() => {
+                this.updateGameStateAndRoomState();
+            }, CARD_VIEW_DELAY);
         } else {
             this.updateGameStateAndRoomState();
         }
